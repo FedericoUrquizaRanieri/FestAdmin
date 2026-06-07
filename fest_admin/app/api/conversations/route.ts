@@ -57,7 +57,7 @@ export async function GET(req: Request) {
 }
 
 // POST: Modify conversation control state (AI vs HUMAN)
-export async function POST(req: Request) {
+export async function PATCH(req: Request) {
   try {
     const { userId: clerkUserId } = await auth();
 
