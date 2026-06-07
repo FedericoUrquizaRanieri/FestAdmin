@@ -20,6 +20,10 @@ model conversations {
   control_over ConversarionControl?
   messages     messages[]
   purchases    purchases[]
+
+  @@index([state])
+  @@index([control_over])
+  @@index([pending])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -41,6 +45,8 @@ model expenses {
   description String?
   amount      BigInt?
   events      events   @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@index([event_id])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -66,6 +72,10 @@ model purchases {
   events          events?         @relation(fields: [event_id], references: [id], onDelete: Cascade)
   tickets         tickets[]
   transfer_auth   transfer_auth[]
+
+  @@index([conversation_id])
+  @@index([event_id])
+  @@index([state])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -81,6 +91,10 @@ model tickets {
   checked_in    DateTime?     @db.Timestamptz(6)
   purchase_id   String?       @db.Uuid
   purchases     purchases?    @relation(fields: [purchase_id], references: [id], onDelete: Cascade)
+
+  @@index([purchase_id])
+  @@index([gender])
+  @@index([payment_state])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -92,6 +106,9 @@ model transfer_auth {
   state        TransferState?
   purchase_id  String?        @db.Uuid
   purchases    purchases?     @relation(fields: [purchase_id], references: [id], onDelete: Cascade)
+
+  @@index([purchase_id])
+  @@index([state])
 }
 
 enum ConversarionControl {
