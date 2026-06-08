@@ -38,3 +38,16 @@ export interface Expense {
   event_id: string;
 }
 
+export interface Conversation {
+  id: string;
+  created_at: string;
+  phone_number: string;
+  buffer: string | null;
+  summary: string | null;
+  state: "IDLE" | "WAITING_PAYMENT" | "WAITING_CONFIRMATION" | "COMPLETED" | null;
+  last_message: string | null;
+  pending: boolean | null;
+  control_over: "AI" | "HUMAN" | null;
+}
+
+
