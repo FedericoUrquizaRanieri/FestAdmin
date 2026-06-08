@@ -53,12 +53,31 @@ export async function GET(req: Request) {
       );
     }
 
-    // Filter tickets where their associated purchase belongs to the event
-    const whereClause = {
+    // Filter tickets where their associated purchase belongs to the event, and optionally match name search
+    const searchQuery = searchParams.get("search") || "";
+
+    const whereClause: any = {
       purchases: {
         event_id: eventId,
       },
     };
+
+    if (searchQuery) {
+      whereClause.OR = [
+        {
+          first_name: {
+            contains: searchQuery,
+            mode: "insensitive",
+          },
+        },
+        {
+          last_name: {
+            contains: searchQuery,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
 
     // Run count and query in parallel to optimize DB load
     const [total, tickets] = await Promise.all([
@@ -67,9 +86,10 @@ export async function GET(req: Request) {
         where: whereClause,
         take,
         skip,
-        orderBy: {
-          created_at: "desc",
-        },
+        orderBy: [
+          { first_name: "asc" },
+          { last_name: "asc" },
+        ],
       }),
     ]);
 

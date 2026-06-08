@@ -17,3 +17,15 @@ export interface DashboardData {
   totalTicketEarnings: number;
   totalExpenses: number;
 }
+
+export interface Ticket {
+  id: string | number;
+  created_at: string;
+  first_name: string | null;
+  last_name: string | null;
+  number_assoc: string | null;
+  payment_state: boolean | null;
+  gender: "MALE" | "FEMALE" | null;
+  price: number | null;
+  checked_in: string | null;
+}
