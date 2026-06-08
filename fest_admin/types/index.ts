@@ -29,3 +29,12 @@ export interface Ticket {
   price: number | null;
   checked_in: string | null;
 }
+
+export interface Expense {
+  id: string | number;
+  created_at: string;
+  description: string | null;
+  amount: number | null;
+  event_id: string;
+}
+
