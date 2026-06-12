@@ -50,4 +50,29 @@ export interface Conversation {
   control_over: "AI" | "HUMAN" | null;
 }
 
+export interface TransferAuth {
+  id: string | number;
+  created_at: string;
+  phone_number: string | null;
+  storage_path: string | null;
+  state: "UNDER_REVIEW" | "APPROVED" | "REJECTED" | null;
+  purchase_id: string | null;
+}
+
+export interface Purchase {
+  id: string;
+  created_at: string;
+  buyer_phone: string | null;
+  total_amount: number | null;
+  paid_amount: number | null;
+  state: "PENDING" | "PAID" | "PARTIALLY_PAID" | "CANCELLED" | "REFUNDED" | null;
+  conversation_id: string | null;
+  event_id: string | null;
+  transfer_auth?: TransferAuth[];
+  conversations?: {
+    phone_number: string;
+  } | null;
+}
+
+
 
