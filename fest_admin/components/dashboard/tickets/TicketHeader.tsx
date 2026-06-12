@@ -42,8 +42,16 @@ export default function TicketHeader({
             Festival activo: <span className="font-bold text-[#66b2ff]">{activeEvent?.name || "Cargando..."}</span> • {activeEvent ? formatLocalDate(activeEvent.date) : ""}
           </p>
         </div>
-        <div className="text-xs font-semibold bg-[#66b2ff]/5 border border-[#66b2ff]/20 px-3 py-1.5 rounded-lg text-[#66b2ff]">
-          Total: {totalTickets} tickets
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="text-xs font-semibold bg-[#66b2ff]/5 border border-[#66b2ff]/20 px-3 py-1.5 rounded-lg text-[#66b2ff]">
+            Total: {totalTickets} tickets
+          </div>
+          <Link
+            href={`/dashboard/tickets/new?event_id=${activeEvent?.id || ""}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-emerald-400 hover:bg-emerald-500/20 hover:text-white hover:border-emerald-500 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-md shadow-emerald-500/5 cursor-pointer"
+          >
+            <span>➕ Crear Ticket</span>
+          </Link>
         </div>
       </div>
     </div>

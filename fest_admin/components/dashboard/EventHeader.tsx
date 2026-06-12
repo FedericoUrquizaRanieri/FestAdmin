@@ -154,6 +154,12 @@ export default function EventHeader({
           >
             🎟️ Tabla de Tickets
           </Link>
+          <Link
+            href={`/dashboard/tickets/new?event_id=${activeEvent?.id || ""}`}
+            className="text-sm font-bold px-6 py-3.5 border-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-white border-emerald-500/30 hover:border-emerald-500 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-md shadow-emerald-500/5 cursor-pointer flex items-center gap-1.5"
+          >
+            <span>➕ Crear Ticket</span>
+          </Link>
         </div>
       </div>
     </div>
