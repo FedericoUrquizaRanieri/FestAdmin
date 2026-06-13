@@ -53,12 +53,31 @@ export async function GET(req: Request) {
       );
     }
 
-    // Filter tickets where their associated purchase belongs to the event
-    const whereClause = {
+    // Filter tickets where their associated purchase belongs to the event, and optionally match name search
+    const searchQuery = searchParams.get("search") || "";
+
+    const whereClause: any = {
       purchases: {
         event_id: eventId,
       },
     };
+
+    if (searchQuery) {
+      whereClause.OR = [
+        {
+          first_name: {
+            contains: searchQuery,
+            mode: "insensitive",
+          },
+        },
+        {
+          last_name: {
+            contains: searchQuery,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
 
     // Run count and query in parallel to optimize DB load
     const [total, tickets] = await Promise.all([
@@ -67,9 +86,10 @@ export async function GET(req: Request) {
         where: whereClause,
         take,
         skip,
-        orderBy: {
-          created_at: "desc",
-        },
+        orderBy: [
+          { first_name: "asc" },
+          { last_name: "asc" },
+        ],
       }),
     ]);
 
@@ -83,6 +103,90 @@ export async function GET(req: Request) {
     );
   } catch (error: any) {
     console.error("Error fetching tickets:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST: Create a ticket manually with an associated purchase
+export async function POST(req: Request) {
+  try {
+    const { userId: clerkUserId } = await auth();
+
+    if (!clerkUserId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { first_name, last_name, number_assoc, gender, price, event_id } = body;
+
+    // Validate required fields
+    if (!first_name || !last_name) {
+      return NextResponse.json(
+        { error: "El nombre y apellido son requeridos." },
+        { status: 400 }
+      );
+    }
+
+    if (!event_id) {
+      return NextResponse.json(
+        { error: "El ID del evento es requerido." },
+        { status: 400 }
+      );
+    }
+
+    if (price === undefined || price === null || isNaN(Number(price))) {
+      return NextResponse.json(
+        { error: "El precio es requerido y debe ser un número válido." },
+        { status: 400 }
+      );
+    }
+
+    if (gender && gender !== "MALE" && gender !== "FEMALE") {
+      return NextResponse.json(
+        { error: "El género debe ser 'MALE' o 'FEMALE'." },
+        { status: 400 }
+      );
+    }
+
+    // Run creation inside a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create the purchase
+      const purchase = await tx.purchases.create({
+        data: {
+          buyer_phone: number_assoc || "",
+          total_amount: BigInt(price),
+          paid_amount: BigInt(price),
+          state: "PAID",
+          conversation_id: null,
+          event_id: event_id,
+        },
+      });
+
+      // 2. Create the ticket
+      const ticket = await tx.tickets.create({
+        data: {
+          first_name,
+          last_name,
+          number_assoc: number_assoc || "",
+          payment_state: true,
+          gender: gender || null,
+          price: BigInt(price),
+          purchase_id: purchase.id,
+        },
+      });
+
+      return ticket;
+    });
+
+    return NextResponse.json(serializeData(result), { status: 201 });
+  } catch (error: any) {
+    console.error("Error creating ticket:", error);
     return NextResponse.json(
       { error: error.message || "Internal Server Error" },
       { status: 500 }
