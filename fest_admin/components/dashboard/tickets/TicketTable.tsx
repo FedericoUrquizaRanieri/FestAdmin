@@ -2,20 +2,19 @@
 
 import EmptyState from "@/components/EmptyState";
 import { Ticket } from "@/types";
+import PaginationControls from "@/components/dashboard/PaginationControls";
 
 interface TicketTableProps {
   tickets: Ticket[];
   loadingTickets: boolean;
   page: number;
-  setPage: (updater: number | ((prev: number) => prev)) => void;
+  setPage: (updater: number) => void;
   totalTickets: number;
   limit: number;
   totalPages: number;
   search: string;
   onRetry?: () => void;
 }
-
-type prev = number;
 
 export default function TicketTable({
   tickets,
@@ -57,9 +56,6 @@ export default function TicketTable({
       />
     );
   }
-
-  const startItem = page * limit + 1;
-  const endItem = Math.min((page + 1) * limit, totalTickets);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[#4e4e52]/20 bg-[#0c0c0e]/40 shadow-xl">
@@ -169,36 +165,17 @@ export default function TicketTable({
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[#4e4e52]/10 bg-zinc-950/10">
-          <div className="text-xs text-[#acb9ca]/60">
-            Mostrando <span className="font-semibold text-white">{startItem}</span> a{" "}
-            <span className="font-semibold text-white">{endItem}</span> de{" "}
-            <span className="font-semibold text-white">{totalTickets}</span> entradas
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setPage((prev: number) => Math.max(prev - 1, 0))}
-              disabled={page === 0 || loadingTickets}
-              className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-[#66b2ff]/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-            >
-              Anterior
-            </button>
-            <div className="text-xs font-bold text-white bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
-              Página {page + 1} de {totalPages}
-            </div>
-            <button
-              onClick={() => setPage((prev: number) => Math.min(prev + 1, totalPages - 1))}
-              disabled={page >= totalPages - 1 || loadingTickets}
-              className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-[#66b2ff]/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-            >
-              Siguiente
-            </button>
-          </div>
-        </div>
-      )}
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        setPage={setPage}
+        totalItems={totalTickets}
+        limit={limit}
+        itemsName="entradas"
+        loading={loadingTickets}
+        hoverColor="blue"
+        containerVariant="table-footer"
+      />
     </div>
   );
 }

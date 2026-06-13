@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useDashboard } from "@/app/dashboard/layout";
+import PageHeader from "@/components/dashboard/PageHeader";
 
 export default function NewTicketPage() {
   const router = useRouter();
@@ -82,33 +83,18 @@ export default function NewTicketPage() {
 
   return (
     <main className="flex flex-col flex-1 px-6 py-8 md:px-12 md:py-10 max-w-2xl mx-auto w-full bg-[#080808] animate-fade-in">
-      <div className="mb-6">
-        <Link
-          href={`/dashboard/tickets?event_id=${eventId || ""}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#acb9ca]/70 hover:text-[#66b2ff] transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-          </svg>
-          Volver a la Planilla de Tickets
-        </Link>
-      </div>
+      <PageHeader
+        title="Crear Nuevo Ticket"
+        backHref={`/dashboard/tickets?event_id=${eventId || ""}`}
+        backLabel="Volver a la Planilla de Tickets"
+        subtitle={
+          <>
+            Se registrará una entrada abonada y su respectiva compra vinculada al festival{" "}
+            <span className="font-bold text-[#66b2ff]">{activeEvent?.name || "Cargando..."}</span>.
+          </>
+        }
+      />
 
-      <div className="border-b border-[#4e4e52]/10 pb-4 mb-6">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-white">
-          Crear Nuevo Ticket
-        </h1>
-        <p className="text-xs text-[#acb9ca]/60 mt-1">
-          Se registrará una entrada abonada y su respectiva compra vinculada al festival{" "}
-          <span className="font-bold text-[#66b2ff]">{activeEvent?.name || "Cargando..."}</span>.
-        </p>
-      </div>
 
       {success ? (
         <div className="p-8 rounded-2xl border border-emerald-500/20 bg-emerald-950/10 text-center space-y-3 animate-fade-in">

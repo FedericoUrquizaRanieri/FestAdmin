@@ -9,6 +9,7 @@ import EventHeader from "@/components/dashboard/EventHeader";
 import FinanceSummary from "@/components/dashboard/FinanceSummary";
 import OperationsSummary from "@/components/dashboard/OperationsSummary";
 import AudienceSummary from "@/components/dashboard/AudienceSummary";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -65,9 +66,7 @@ export default function DashboardPage() {
       )}
 
       {loadingMetrics && !metrics ? (
-        <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-        </div>
+        <LoadingSpinner variant="section" />
       ) : (
         <div className="space-y-8">
           <FinanceSummary metrics={metrics} activeEventId={activeEvent?.id} />
@@ -78,3 +77,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

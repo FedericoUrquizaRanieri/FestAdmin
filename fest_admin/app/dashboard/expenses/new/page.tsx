@@ -5,6 +5,8 @@ import { useDashboard } from "../../layout";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ErrorMessage from "@/components/ErrorMessage";
+import PageHeader from "@/components/dashboard/PageHeader";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function NewExpensePage() {
   const { activeEvent } = useDashboard();
@@ -64,43 +66,23 @@ export default function NewExpensePage() {
   };
 
   if (!activeEvent) {
-    return (
-      <div className="py-20 flex justify-center bg-[#080808] min-h-screen">
-        <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <main className="flex flex-col flex-1 px-6 py-8 md:px-12 md:py-10 max-w-2xl mx-auto w-full bg-[#080808] animate-fade-in">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Link
-          href={`/dashboard/expenses?event_id=${activeEvent.id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#acb9ca] hover:text-[#66b2ff] transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-          </svg>
-          Volver a la Lista
-        </Link>
-      </div>
+      <PageHeader
+        title="Registrar Nuevo Gasto"
+        backHref={`/dashboard/expenses?event_id=${activeEvent.id}`}
+        backLabel="Volver a la Lista"
+        subtitle={
+          <>
+            Carga un nuevo egreso para el festival <span className="text-[#66b2ff] font-medium">{activeEvent.name}</span>
+          </>
+        }
+        borderBottom={false}
+      />
 
-      {/* Title */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
-          Registrar Nuevo Gasto
-        </h1>
-        <p className="text-sm text-[#acb9ca]/70 mt-1">
-          Carga un nuevo egreso para el festival <span className="text-[#66b2ff] font-medium">{activeEvent.name}</span>
-        </p>
-      </div>
 
       {formError && (
         <div className="mb-6">

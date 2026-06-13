@@ -5,9 +5,11 @@ import { useDashboard } from "../layout";
 import { Conversation } from "@/types";
 import ErrorMessage from "@/components/ErrorMessage";
 import EmptyState from "@/components/EmptyState";
-import ConversationHeader from "@/components/dashboard/conversations/ConversationHeader";
+import PageHeader from "@/components/dashboard/PageHeader";
 import ConversationFilters from "@/components/dashboard/conversations/ConversationFilters";
 import ConversationCard from "@/components/dashboard/conversations/ConversationCard";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PaginationControls from "@/components/dashboard/PaginationControls";
 
 export default function ConversationsPage() {
   const { activeEvent } = useDashboard();
@@ -86,11 +88,7 @@ export default function ConversationsPage() {
   };
 
   if (!activeEvent) {
-    return (
-      <div className="py-20 flex justify-center bg-[#080808] min-h-screen">
-        <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingSpinner variant="section" />;
   }
 
   // Filtering Logic
@@ -106,12 +104,24 @@ export default function ConversationsPage() {
   const totalPages = Math.ceil(totalCount / limit);
   const paginatedConversations = filteredConversations.slice(page * limit, (page + 1) * limit);
 
-  const startItem = totalCount === 0 ? 0 : page * limit + 1;
-  const endItem = Math.min((page + 1) * limit, totalCount);
-
   return (
     <main className="flex flex-col flex-1 px-6 py-8 md:px-12 md:py-10 max-w-7xl mx-auto w-full bg-[#080808] animate-fade-in">
-      <ConversationHeader activeEvent={activeEvent} filteredCount={filteredConversations.length} />
+      <PageHeader
+        title="Conversaciones y Control"
+        backHref={`/dashboard?event_id=${activeEvent.id}`}
+        backLabel="Volver al Panel"
+        subtitle={
+          <span className="flex flex-wrap items-center gap-2">
+            <span>Festival activo:</span>
+            <span className="font-bold text-[#66b2ff]">{activeEvent.name}</span>
+          </span>
+        }
+        actions={
+          <div className="text-xs font-semibold bg-[#66b2ff]/5 border border-[#66b2ff]/20 px-4 py-2 rounded-xl text-[#66b2ff]">
+            Total: {filteredConversations.length} conversaciones
+          </div>
+        }
+      />
 
       <ConversationFilters
         search={search}
@@ -129,9 +139,7 @@ export default function ConversationsPage() {
       )}
 
       {loading && conversations.length === 0 ? (
-        <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-        </div>
+        <LoadingSpinner variant="section" />
       ) : filteredConversations.length === 0 ? (
         <EmptyState
           icon="💬"
@@ -156,36 +164,17 @@ export default function ConversationsPage() {
             ))}
           </div>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 rounded-2xl border border-[#4e4e52]/10 bg-[#0c0c0e]/20 backdrop-blur-sm shadow-xl">
-              <div className="text-xs text-[#acb9ca]/60">
-                Mostrando <span className="font-semibold text-white">{startItem}</span> a{" "}
-                <span className="font-semibold text-white">{endItem}</span> de{" "}
-                <span className="font-semibold text-white">{totalCount}</span> conversaciones
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                  disabled={page === 0 || loading}
-                  className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-[#66b2ff]/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-                >
-                  Anterior
-                </button>
-                <div className="text-xs font-bold text-white bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
-                  Página {page + 1} de {totalPages}
-                </div>
-                <button
-                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages - 1))}
-                  disabled={page >= totalPages - 1 || loading}
-                  className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-[#66b2ff]/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          )}
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            setPage={setPage}
+            totalItems={totalCount}
+            limit={limit}
+            itemsName="conversaciones"
+            loading={loading}
+            hoverColor="blue"
+            containerVariant="card"
+          />
         </div>
       )}
     </main>

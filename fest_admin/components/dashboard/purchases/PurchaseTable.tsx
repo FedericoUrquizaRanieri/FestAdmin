@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Purchase } from "@/types";
 import { formatLocalDate } from "@/lib/utils";
 import EmptyState from "@/components/EmptyState";
+import PaginationControls from "@/components/dashboard/PaginationControls";
 
 interface PurchaseTableProps {
   purchases: Purchase[];
@@ -67,9 +68,6 @@ export default function PurchaseTable({
   const totalPages = Math.ceil(totalCount / limit);
   const paginatedPurchases = purchases.slice(page * limit, (page + 1) * limit);
 
-  const startItem = totalCount === 0 ? 0 : page * limit + 1;
-  const endItem = Math.min((page + 1) * limit, totalCount);
-
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[#4e4e52]/20 bg-[#0c0c0e]/30 shadow-xl animate-fade-in">
       <div className="overflow-x-auto">
@@ -129,36 +127,16 @@ export default function PurchaseTable({
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[#4e4e52]/10 bg-[#0c0c0e]/40">
-          <div className="text-xs text-[#acb9ca]/60">
-            Mostrando <span className="font-semibold text-white">{startItem}</span> a{" "}
-            <span className="font-semibold text-white">{endItem}</span> de{" "}
-            <span className="font-semibold text-white">{totalCount}</span> compras
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-              disabled={page === 0}
-              className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-[#66b2ff]/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-            >
-              Anterior
-            </button>
-            <div className="text-xs font-bold text-white bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
-              Página {page + 1} de {totalPages}
-            </div>
-            <button
-              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages - 1))}
-              disabled={page >= totalPages - 1}
-              className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-[#66b2ff]/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-            >
-              Siguiente
-            </button>
-          </div>
-        </div>
-      )}
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        setPage={setPage}
+        totalItems={totalCount}
+        limit={limit}
+        itemsName="compras"
+        hoverColor="blue"
+        containerVariant="table-footer"
+      />
     </div>
   );
 }

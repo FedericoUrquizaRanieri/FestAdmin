@@ -7,6 +7,9 @@ import { Expense } from "@/types";
 import { formatLocalDate } from "@/lib/utils";
 import ErrorMessage from "@/components/ErrorMessage";
 import EmptyState from "@/components/EmptyState";
+import PageHeader from "@/components/dashboard/PageHeader";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PaginationControls from "@/components/dashboard/PaginationControls";
 
 export default function ExpensesPage() {
   const { activeEvent } = useDashboard();
@@ -54,11 +57,7 @@ export default function ExpensesPage() {
   };
 
   if (!activeEvent) {
-    return (
-      <div className="py-20 flex justify-center bg-[#080808] min-h-screen">
-        <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingSpinner variant="section" />;
   }
 
   // Paginated Slices
@@ -66,37 +65,14 @@ export default function ExpensesPage() {
   const totalPages = Math.ceil(totalExpensesCount / limit);
   const paginatedExpenses = expenses.slice(page * limit, (page + 1) * limit);
 
-  const startItem = totalExpensesCount === 0 ? 0 : page * limit + 1;
-  const endItem = Math.min((page + 1) * limit, totalExpensesCount);
-
   return (
     <main className="flex flex-col flex-1 px-6 py-8 md:px-12 md:py-10 max-w-7xl mx-auto w-full bg-[#080808] animate-fade-in">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Link
-          href={`/dashboard?event_id=${activeEvent.id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#acb9ca] hover:text-[#66b2ff] transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-          </svg>
-          Volver al Panel
-        </Link>
-      </div>
-
-      {/* Header Title and CTA */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[#4e4e52]/10 pb-5 mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            Planilla de Gastos
-          </h1>
-          <p className="text-xs text-[#acb9ca]/60 mt-1.5 flex flex-wrap items-center gap-2">
+      <PageHeader
+        title="Planilla de Gastos"
+        backHref={`/dashboard?event_id=${activeEvent.id}`}
+        backLabel="Volver al Panel"
+        subtitle={
+          <span className="flex flex-wrap items-center gap-2">
             <span>Festival activo:</span>
             <span className="font-bold text-[#66b2ff]">{activeEvent.name}</span>
             {activeEvent.date && (
@@ -105,31 +81,32 @@ export default function ExpensesPage() {
                 <span>{formatLocalDate(activeEvent.date)}</span>
               </>
             )}
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="text-xs font-bold bg-rose-500/5 border border-rose-500/20 px-4 py-2 rounded-xl text-rose-400 select-all">
-            Total Gastos: {formatCurrency(totalAmount)}
-          </div>
-          
-          <Link
-            href={`/dashboard/expenses/new?event_id=${activeEvent.id}`}
-            className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all duration-300 shadow-lg shadow-rose-950/20 hover:-translate-y-0.5 hover:shadow-rose-500/20 border border-rose-500/20 cursor-pointer"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+          </span>
+        }
+        actions={
+          <>
+            <div className="text-xs font-bold bg-rose-500/5 border border-rose-500/20 px-4 py-2 rounded-xl text-rose-400 select-all">
+              Total Gastos: {formatCurrency(totalAmount)}
+            </div>
+            
+            <Link
+              href={`/dashboard/expenses/new?event_id=${activeEvent.id}`}
+              className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all duration-300 shadow-lg shadow-rose-950/20 hover:-translate-y-0.5 hover:shadow-rose-500/20 border border-rose-500/20 cursor-pointer"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-            </svg>
-            Registrar Gasto
-          </Link>
-        </div>
-      </div>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              Registrar Gasto
+            </Link>
+          </>
+        }
+      />
 
       {error && (
         <div className="mb-6">
@@ -138,10 +115,9 @@ export default function ExpensesPage() {
       )}
 
       {loading && expenses.length === 0 ? (
-        <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-        </div>
+        <LoadingSpinner variant="section" />
       ) : expenses.length === 0 ? (
+
         <EmptyState
           icon="💸"
           title="No hay gastos registrados"
@@ -181,36 +157,17 @@ export default function ExpensesPage() {
               </table>
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[#4e4e52]/10 bg-[#0c0c0e]/40">
-                <div className="text-xs text-[#acb9ca]/60">
-                  Mostrando <span className="font-semibold text-white">{startItem}</span> a{" "}
-                  <span className="font-semibold text-white">{endItem}</span> de{" "}
-                  <span className="font-semibold text-white">{totalExpensesCount}</span> gastos
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                    disabled={page === 0 || loading}
-                    className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-rose-500/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-                  >
-                    Anterior
-                  </button>
-                  <div className="text-xs font-bold text-white bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
-                    Página {page + 1} de {totalPages}
-                  </div>
-                  <button
-                    onClick={() => setPage((prev) => Math.min(prev + 1, totalPages - 1))}
-                    disabled={page >= totalPages - 1 || loading}
-                    className="h-9 px-4 rounded-xl border border-[#4e4e52]/20 bg-[#0c0c0e]/60 text-xs font-semibold text-[#acb9ca] hover:text-white hover:border-rose-500/40 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              </div>
-            )}
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              setPage={setPage}
+              totalItems={totalExpensesCount}
+              limit={limit}
+              itemsName="gastos"
+              loading={loading}
+              hoverColor="rose"
+              containerVariant="table-footer"
+            />
           </div>
         </div>
       )}

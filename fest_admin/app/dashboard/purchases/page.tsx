@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useDashboard } from "../layout";
 import { Purchase } from "@/types";
 import ErrorMessage from "@/components/ErrorMessage";
-import PurchaseHeader from "@/components/dashboard/purchases/PurchaseHeader";
+import PageHeader from "@/components/dashboard/PageHeader";
 import PurchaseTable from "@/components/dashboard/purchases/PurchaseTable";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function PurchasesPage() {
   const { activeEvent } = useDashboard();
-  
+
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,16 +39,27 @@ export default function PurchasesPage() {
   }, [activeEvent]);
 
   if (!activeEvent) {
-    return (
-      <div className="py-20 flex justify-center bg-[#080808] min-h-screen">
-        <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingSpinner variant="section" />;
   }
 
   return (
     <main className="flex flex-col flex-1 px-6 py-8 md:px-12 md:py-10 max-w-7xl mx-auto w-full bg-[#080808] animate-fade-in">
-      <PurchaseHeader activeEvent={activeEvent} pendingCount={purchases.length} />
+      <PageHeader
+        title="Control de Compras"
+        backHref={`/dashboard?event_id=${activeEvent.id}`}
+        backLabel="Volver al Panel"
+        subtitle={
+          <span className="flex flex-wrap items-center gap-2">
+            <span>Festival activo:</span>
+            <span className="font-bold text-[#66b2ff]">{activeEvent.name}</span>
+          </span>
+        }
+        actions={
+          <div className="text-xs font-semibold bg-amber-500/5 border border-amber-500/25 px-4 py-2 rounded-xl text-amber-400">
+            Pendientes: {purchases.length} compras
+          </div>
+        }
+      />
 
       {error && (
         <div className="mb-6">
@@ -56,9 +68,7 @@ export default function PurchasesPage() {
       )}
 
       {loading && purchases.length === 0 ? (
-        <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-[#66b2ff]/20 border-t-[#66b2ff] rounded-full animate-spin"></div>
-        </div>
+        <LoadingSpinner variant="section" />
       ) : (
         <PurchaseTable purchases={purchases} activeEventId={activeEvent.id} />
       )}
