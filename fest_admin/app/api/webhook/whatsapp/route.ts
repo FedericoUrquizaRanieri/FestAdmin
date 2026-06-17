@@ -1,0 +1,226 @@
+import { NextResponse } from "next/server";
+import prisma from "@/prisma";
+import { promises as fs } from "fs";
+import path from "path";
+import { downloadWhatsAppMedia, uploadToSupabaseStorage } from "@/lib/whatsapp";
+import { transcribeAudio } from "@/lib/gemini";
+
+// GET: Webhook verification by Meta
+export async function GET(req: Request) {
+  try {
+    if (req.headers.get("x-mock-apis") === "true") {
+      process.env.MOCK_APIS = "true";
+    }
+    const { searchParams } = new URL(req.url);
+    const mode = searchParams.get("hub.mode");
+    const token = searchParams.get("hub.verify_token");
+    const challenge = searchParams.get("hub.challenge");
+
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+
+    if (mode && token) {
+      if (mode === "subscribe" && token === verifyToken) {
+        console.log("WEBHOOK_VERIFIED");
+        return new Response(challenge, {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        });
+      } else {
+        return new Response("Forbidden", { status: 403 });
+      }
+    }
+    return new Response("Bad Request", { status: 400 });
+  } catch (error: any) {
+    console.error("Error in webhook verification GET:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+}
+
+// POST: Handle incoming WhatsApp message webhook events
+export async function POST(req: Request) {
+  try {
+    if (req.headers.get("x-mock-apis") === "true") {
+      process.env.MOCK_APIS = "true";
+    }
+    const body = await req.json();
+
+    // Verify webhook object type
+    if (body.object !== "whatsapp_business_account") {
+      return NextResponse.json({ error: "Invalid object type" }, { status: 400 });
+    }
+
+    if (!body.entry || body.entry.length === 0) {
+      return NextResponse.json({ status: "ignored", reason: "no entries" });
+    }
+
+    for (const entry of body.entry) {
+      const changes = entry.changes;
+      if (!changes) continue;
+
+      for (const change of changes) {
+        const value = change.value;
+        if (!value) continue;
+
+        const messages = value.messages;
+        if (!messages || messages.length === 0) {
+          // Ignore statuses or other non-message events
+          continue;
+        }
+
+        for (const message of messages) {
+          const from = message.from; // Sender phone number
+          const msgType = message.type;
+
+          if (!from) continue;
+
+          // Find or create conversation for this number
+          let conversation = await prisma.conversations.findFirst({
+            where: { phone_number: from },
+          });
+
+          if (!conversation) {
+            conversation = await prisma.conversations.create({
+              data: {
+                phone_number: from,
+                state: "IDLE",
+                control_over: "AI",
+                pending: true,
+                last_message: new Date(),
+                buffer: "",
+                summary: "",
+              },
+            });
+          }
+
+          let messageContent = "";
+
+          if (msgType === "text" && message.text) {
+            messageContent = message.text.body;
+            console.log(`Text message processed for ${from}: ${messageContent}`);
+          } else if (msgType === "image" && message.image) {
+            const imageId = message.image.id;
+            // Find latest event to associate with the purchase
+            const latestEvent = await prisma.events.findFirst({
+              orderBy: { created_at: "desc" },
+            });
+
+            if (!latestEvent) {
+              console.warn("No event found. Cannot create purchase for image message.");
+              continue;
+            }
+
+            // Create purchase
+            const purchase = await prisma.purchases.create({
+              data: {
+                buyer_phone: from,
+                conversation_id: conversation.id,
+                event_id: latestEvent.id,
+                state: "PENDING",
+              },
+            });
+
+            let storagePath = "";
+            try {
+              const { buffer, mimeType: downloadedMime } = await downloadWhatsAppMedia(imageId);
+              let ext = "jpg";
+              if (downloadedMime.includes("png")) ext = "png";
+              else if (downloadedMime.includes("webp")) ext = "webp";
+              else if (downloadedMime.includes("jpeg")) ext = "jpeg";
+
+              const filename = `transfer-${purchase.id}-${Date.now()}.${ext}`;
+              storagePath = await uploadToSupabaseStorage(buffer, downloadedMime, filename, "transfer_images");
+              console.log(`Successfully uploaded image to Supabase: ${storagePath}`);
+            } catch (downloadErr: any) {
+              console.error(`Failed to download/upload WhatsApp image media: ${downloadErr.message}`);
+              // Fallback to local
+              try {
+                const { buffer } = await downloadWhatsAppMedia(imageId);
+                const filename = `fallback-transfer-${purchase.id}-${Date.now()}.jpg`;
+                const uploadsDir = path.join(process.cwd(), "public", "uploads");
+                await fs.mkdir(uploadsDir, { recursive: true });
+                const absolutePath = path.join(uploadsDir, filename);
+                await fs.writeFile(absolutePath, buffer);
+                storagePath = `/uploads/${filename}`;
+              } catch (localFallbackErr: any) {
+                storagePath = "/uploads/fallback-error.jpg";
+              }
+            }
+
+            // Create transfer_auth record
+            await prisma.transfer_auth.create({
+              data: {
+                phone_number: from,
+                storage_path: storagePath,
+                state: "UNDER_REVIEW",
+                purchase_id: purchase.id,
+              },
+            });
+
+            messageContent = `[Imagen recibida - Comprobante de transferencia: ${storagePath}]`;
+            console.log(`Image message processed for ${from}. Purchase created: ${purchase.id}.`);
+          } else if (msgType === "audio" && message.audio) {
+            const audioId = message.audio.id;
+            let transcription = "";
+            try {
+              const { buffer, mimeType: downloadedMime } = await downloadWhatsAppMedia(audioId);
+              let ext = "ogg";
+              if (downloadedMime.includes("mp3")) ext = "mp3";
+              else if (downloadedMime.includes("wav")) ext = "wav";
+              else if (downloadedMime.includes("aac")) ext = "aac";
+              
+              const filename = `audio-${conversation.id}-${Date.now()}.${ext}`;
+              const uploadsDir = path.join(process.cwd(), "public", "uploads");
+              await fs.mkdir(uploadsDir, { recursive: true });
+              const absolutePath = path.join(uploadsDir, filename);
+              await fs.writeFile(absolutePath, buffer);
+
+              transcription = await transcribeAudio(buffer, downloadedMime);
+              console.log(`Successfully transcribed audio for ${from}: ${transcription}`);
+            } catch (err: any) {
+              console.error(`Failed to download or transcribe audio: ${err.message}`);
+              transcription = "[Error transcribiendo nota de voz]";
+            }
+
+            messageContent = `[Nota de voz transcrita]: ${transcription}`;
+            console.log(`Audio message processed for ${from}.`);
+          } else {
+            messageContent = `[Mensaje tipo '${msgType}' no soportado actualmente]`;
+            console.log(`Unsupported message type '${msgType}' received from ${from}.`);
+          }
+
+          // Save message to messages table (for dashboard UI display)
+          await prisma.messages.create({
+            data: {
+              content: messageContent,
+              conversation_id: conversation.id,
+            },
+          });
+
+          // Concatenate to conversation buffer and set pending: true
+          const currentBuffer = conversation.buffer || "";
+          const newBuffer = currentBuffer === "" 
+            ? `Cliente: ${messageContent}` 
+            : `${currentBuffer}\nCliente: ${messageContent}`;
+
+          // Update conversation in database
+          await prisma.conversations.update({
+            where: { id: conversation.id },
+            data: {
+              buffer: newBuffer,
+              pending: true,
+              last_message: new Date(),
+            },
+          });
+        }
+      }
+    }
+
+    return NextResponse.json({ status: "success" });
+  } catch (error: any) {
+    console.error("Webhook processing error:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
