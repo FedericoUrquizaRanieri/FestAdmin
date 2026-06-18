@@ -115,6 +115,13 @@ export default function TicketsPage() {
           limit={limit}
           totalPages={totalPages}
           search={search}
+          onTicketUpdate={(updatedTicket) => {
+            setTickets((prev) =>
+              prev.map((t) =>
+                t.id.toString() === updatedTicket.id.toString() ? updatedTicket : t
+              )
+            );
+          }}
         />
       )}
     </main>

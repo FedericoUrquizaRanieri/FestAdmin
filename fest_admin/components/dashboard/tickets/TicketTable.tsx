@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import { Ticket } from "@/types";
 import PaginationControls from "@/components/dashboard/PaginationControls";
@@ -14,6 +15,7 @@ interface TicketTableProps {
   totalPages: number;
   search: string;
   onRetry?: () => void;
+  onTicketUpdate?: (updatedTicket: Ticket) => void;
 }
 
 export default function TicketTable({
@@ -25,7 +27,37 @@ export default function TicketTable({
   limit,
   totalPages,
   search,
+  onTicketUpdate,
 }: TicketTableProps) {
+  const [loadingCheckIn, setLoadingCheckIn] = useState<Record<string | number, boolean>>({});
+
+  const handleCheckIn = async (ticketId: string | number) => {
+    setLoadingCheckIn((prev) => ({ ...prev, [ticketId]: true }));
+    try {
+      const response = await fetch(`/api/tickets/${ticketId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ checked_in: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo validar el ticket");
+      }
+
+      const updatedTicket = await response.json();
+      if (onTicketUpdate) {
+        onTicketUpdate(updatedTicket);
+      }
+    } catch (error: any) {
+      console.error("Error al validar el ticket:", error);
+      alert(error.message || "Error al validar el ticket. Por favor intentá de nuevo.");
+    } finally {
+      setLoadingCheckIn((prev) => ({ ...prev, [ticketId]: false }));
+    }
+  };
+
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return "$0";
     return new Intl.NumberFormat("es-AR", {
@@ -155,7 +187,30 @@ export default function TicketTable({
                         {formatTime(t.checked_in)}
                       </span>
                     ) : (
-                      <span className="text-xs text-[#acb9ca]/30">-</span>
+                      <button
+                        onClick={() => handleCheckIn(t.id)}
+                        disabled={loadingCheckIn[t.id]}
+                        className={`
+                          px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 inline-flex items-center justify-center min-w-[70px]
+                          ${
+                            loadingCheckIn[t.id]
+                              ? "bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed"
+                              : "bg-blue-600/10 text-blue-400 border-blue-500/20 hover:bg-blue-600 hover:text-white hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/15 active:scale-[0.98] cursor-pointer"
+                          }
+                        `}
+                      >
+                        {loadingCheckIn[t.id] ? (
+                          <>
+                            <svg className="animate-spin -ml-0.5 mr-1.5 h-3 w-3 text-zinc-500" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Validando
+                          </>
+                        ) : (
+                          "Validar"
+                        )}
+                      </button>
                     )}
                   </td>
                 </tr>
