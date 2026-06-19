@@ -56,13 +56,14 @@ export async function downloadWhatsAppMedia(mediaId: string): Promise<{ buffer: 
   ) {
     console.log(`[MOCK WHATSAPP MEDIA DOWNLOAD] Media ID: ${mediaId}`);
     if (mediaId.includes("audio")) {
-      // Generate a valid 1-second WAV silence file programmatically
-      const wavSilence = createWaveSilence();
-      return { buffer: wavSilence, mimeType: "audio/wav" };
+      const audioPath = path.join(process.cwd(), "public", "uploads", "WhatsApp Ptt 2026-06-19 at 13.01.32.ogg");
+      const buffer = await fs.readFile(audioPath);
+      return { buffer, mimeType: "audio/ogg; codecs=opus" };
     }
-    // Return a base64 encoded valid 1-pixel PNG image
-    const mockImage = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
-    return { buffer: mockImage, mimeType: "image/png" };
+
+    const imagePath = path.join(process.cwd(), "public", "uploads", "WhatsApp Image 2026-06-07 at 12.03.08.jpeg");
+    const buffer = await fs.readFile(imagePath);
+    return { buffer, mimeType: "image/jpeg" };
   }
 
   // 1. Get media metadata URL
@@ -150,33 +151,4 @@ export async function uploadToSupabaseStorage(
 
   // Construct and return the public URL for the uploaded object
   return `${cleanUrl}/storage/v1/object/public/${bucketName}/${filename}`;
-}
-
-/**
- * Generates a valid 1-second silence WAVE file buffer.
- * Used for testing audio transcription API endpoints without hitting Meta.
- */
-function createWaveSilence(): Buffer {
-  const sampleRate = 8000;
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const dataSize = sampleRate * numChannels * (bitsPerSample / 8) * 1; // 1 second
-  const buffer = Buffer.alloc(44 + dataSize);
-
-  buffer.write("RIFF", 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write("WAVE", 8);
-  buffer.write("fmt ", 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20); // PCM format
-  buffer.writeUInt16LE(numChannels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
-  buffer.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
-  buffer.writeUInt16LE(bitsPerSample, 34);
-  buffer.write("data", 36);
-  buffer.writeUInt32LE(dataSize, 40);
-
-  // Remaining bytes are filled with 0 (silence)
-  return buffer;
 }

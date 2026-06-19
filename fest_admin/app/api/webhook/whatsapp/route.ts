@@ -176,17 +176,6 @@ export async function POST(req: Request) {
             let transcription = "";
             try {
               const { buffer, mimeType: downloadedMime } = await downloadWhatsAppMedia(audioId);
-              let ext = "ogg";
-              if (downloadedMime.includes("mp3")) ext = "mp3";
-              else if (downloadedMime.includes("wav")) ext = "wav";
-              else if (downloadedMime.includes("aac")) ext = "aac";
-              
-              const filename = `audio-${conversation.id}-${Date.now()}.${ext}`;
-              const uploadsDir = path.join(process.cwd(), "public", "uploads");
-              await fs.mkdir(uploadsDir, { recursive: true });
-              const absolutePath = path.join(uploadsDir, filename);
-              await fs.writeFile(absolutePath, buffer);
-
               transcription = await transcribeAudio(buffer, downloadedMime);
               console.log(`Successfully transcribed audio for ${from}: ${transcription}`);
             } catch (err: any) {
