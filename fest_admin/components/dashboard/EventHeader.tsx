@@ -85,8 +85,8 @@ export default function EventHeader({
                   key={e.id}
                   onClick={() => onSelect(e)}
                   className={`w-full text-left px-4 py-3 text-sm flex flex-col gap-0.5 hover:bg-[#66b2ff]/10 transition-colors cursor-pointer border-l-2 ${e.id === activeEvent?.id
-                      ? "border-[#66b2ff] bg-[#66b2ff]/5 text-white"
-                      : "border-transparent text-[#acb9ca]/90 hover:text-white"
+                    ? "border-[#66b2ff] bg-[#66b2ff]/5 text-white"
+                    : "border-transparent text-[#acb9ca]/90 hover:text-white"
                     }`}
                 >
                   <span className="font-semibold">{e.name}</span>

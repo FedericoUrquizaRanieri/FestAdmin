@@ -6,9 +6,10 @@ import { formatLocalDate } from "@/lib/utils";
 
 interface EventCardProps {
   event: Event;
+  onEdit?: (event: Event) => void;
 }
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, onEdit }: EventCardProps) {
   const router = useRouter();
 
   const formattedDate = formatLocalDate(event.date);
@@ -30,14 +31,37 @@ export default function EventCard({ event }: EventCardProps) {
           <span className="text-[11px] font-semibold text-[#66b2ff] bg-[#66b2ff]/10 px-2 py-0.5 rounded border border-[#66b2ff]/20 uppercase tracking-wider">
             Evento Activo
           </span>
-          <span className="text-xs text-[#acb9ca]/60 font-medium">
-            {formattedDate}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#acb9ca]/60 font-medium">
+              {formattedDate}
+            </span>
+            {onEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(event);
+                }}
+                className="p-1.5 rounded-lg border border-[#4e4e52]/30 bg-[#080808]/60 hover:bg-[#66b2ff]/10 hover:border-[#66b2ff]/40 text-[#acb9ca] hover:text-[#66b2ff] transition-all cursor-pointer"
+                title="Editar Configuración"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
-        <h3 className="text-lg font-bold text-white group-hover:text-[#66b2ff] line-clamp-2 transition-colors duration-200">
+        <h3 className="text-lg font-bold text-white group-hover:text-[#66b2ff] line-clamp-1 transition-colors duration-200">
           {event.name || "Evento sin nombre"}
         </h3>
+        
+        {/* Ticket Price & Transfer alias inline display */}
+        <div className="flex items-center gap-x-2 text-[10px] text-[#acb9ca]/50 mt-1.5 font-medium">
+          <span>🏷️ Entrada: ${event.ticket_price !== undefined && event.ticket_price !== null ? Number(event.ticket_price).toLocaleString("es-AR") : "10.000"}</span>
+          <span className="w-1 h-1 rounded-full bg-zinc-700" />
+          <span className="truncate max-w-[120px]">🔗 {event.transfer_link || "reptil.yuyo.medano"}</span>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#4e4e52]/10">

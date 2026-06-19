@@ -3,6 +3,8 @@ export interface Event {
   name: string | null;
   location: string | null;
   date: string | null;
+  ticket_price?: number | null;
+  transfer_link?: string | null;
 }
 
 export interface DashboardData {
