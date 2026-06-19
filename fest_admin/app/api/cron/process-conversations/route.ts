@@ -37,6 +37,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "No pending AI conversations to process." });
     }
 
+    // Fetch latest event settings (ticket price, transfer link alias)
+    const latestEvent = await prisma.events.findFirst({
+      orderBy: { created_at: "desc" },
+    });
+
+    const ticketPrice = latestEvent?.ticket_price ? Number(latestEvent.ticket_price) : 10000;
+    const transferLink = latestEvent?.transfer_link || "reptil.yuyo.medano";
+
     console.log(`Processing ${pendingConversations.length} pending conversations...`);
 
     // 3. Process each conversation in isolation
@@ -80,7 +88,9 @@ ${latestPurchase.tickets.length > 0
           conversation.summary || "",
           conversation.buffer || "",
           conversation.buffer || "",
-          purchaseInfo
+          purchaseInfo,
+          ticketPrice,
+          transferLink
         );
 
         console.log(`Gemini analysis results for ${phone}:`, JSON.stringify(analysis));
@@ -90,14 +100,9 @@ ${latestPurchase.tickets.length > 0
         let purchaseState = analysis.state;
 
         if (analysis.intent === "compra_entrada") {
-          // Find latest event to associate purchase with
-          const latestEvent = await prisma.events.findFirst({
-            orderBy: { created_at: "desc" },
-          });
-
           if (latestEvent) {
             const ticketCount = analysis.cantidad || 1;
-            const pricePerTicket = 10000;
+            const pricePerTicket = ticketPrice;
             const total = ticketCount * pricePerTicket;
 
             let targetPurchase: any = latestPurchase;
@@ -130,16 +135,11 @@ ${latestPurchase.tickets.length > 0
             console.warn("Could not create purchase: No events found in DB.");
           }
         } else if (analysis.intent === "compra_cerrada") {
-          // Confirm payment and generate tickets
-          const latestEvent = await prisma.events.findFirst({
-            orderBy: { created_at: "desc" },
-          });
-
           if (latestEvent) {
             let targetPurchase: any = latestPurchase;
             const total = Array.isArray(analysis.personas) && analysis.personas.length > 0
-              ? analysis.personas.reduce((sum, p) => sum + (p.price || 10000), 0)
-              : (analysis.cantidad || 1) * 10000;
+              ? analysis.personas.reduce((sum, p) => sum + (p.price || ticketPrice), 0)
+              : (analysis.cantidad || 1) * ticketPrice;
 
             if (!targetPurchase) {
               targetPurchase = await prisma.purchases.create({
@@ -179,7 +179,7 @@ ${latestPurchase.tickets.length > 0
                     number_assoc: phone, // Set phone number as identifier
                     payment_state: false, // payment is false until approved
                     gender: gender as any, // MALE or FEMALE
-                    price: BigInt(price || 10000),
+                    price: BigInt(price || ticketPrice),
                     purchase_id: targetPurchase.id,
                   },
                 });

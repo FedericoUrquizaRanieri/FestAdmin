@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, location, date } = body;
+    const { name, location, date, ticket_price, transfer_link } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -59,6 +59,8 @@ export async function POST(req: Request) {
         name,
         location: location || "",
         date: date ? new Date(date) : null,
+        ticket_price: ticket_price ? BigInt(ticket_price) : BigInt(10000),
+        transfer_link: transfer_link || "reptil.yuyo.medano",
       },
     });
 

@@ -106,61 +106,82 @@ export default function TransferList({
                   {getTransferStateBadge(t.state)}
                 </div>
 
-                {/* Voucher Mock Visual Rendering */}
-                <div className="p-5 flex-1 flex flex-col justify-center items-center bg-[#080808]/40 border-b border-[#4e4e52]/10">
-                  <div className="w-full max-w-[280px] rounded-2xl border border-zinc-700/30 bg-[#080808]/80 backdrop-blur-md shadow-2xl p-5 font-mono text-[10px] text-[#acb9ca]/90 relative overflow-hidden flex flex-col gap-3">
-                    {/* Bank Header Ribbon */}
-                    <div className="flex justify-between items-center border-b border-dashed border-zinc-700/50 pb-2 mb-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-555 animate-pulse" />
-                        <span className="font-extrabold text-white text-[9px] uppercase tracking-wider">
-                          {mockInfo.bankName}
+                {/* Voucher Visual Rendering */}
+                <div className="p-5 flex-1 flex flex-col justify-center items-center bg-[#080808]/40 border-b border-[#4e4e52]/10 min-h-[320px]">
+                  {t.storage_path ? (
+                    <div className="relative group w-full max-w-[280px] rounded-2xl overflow-hidden border border-zinc-700/30 shadow-2xl bg-zinc-950 flex flex-col items-center p-2">
+                      <img
+                        src={t.storage_path}
+                        alt="Comprobante de Transferencia"
+                        className="w-full h-auto object-contain max-h-[300px] rounded-xl transition-transform duration-200 group-hover:scale-[1.02]"
+                      />
+                      {/* Visual Stamp Overlay for status on receipt */}
+                      {isApproved && (
+                        <div className="absolute right-3 top-3 transform rotate-12 border-2 border-emerald-500 text-emerald-450 bg-[#080808]/90 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded shadow">
+                          Aprobado
+                        </div>
+                      )}
+                      {isRejected && (
+                        <div className="absolute right-3 top-3 transform rotate-12 border-2 border-rose-500 text-rose-450 bg-[#080808]/90 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded shadow">
+                          Rechazado
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-[280px] rounded-2xl border border-zinc-700/30 bg-[#080808]/80 backdrop-blur-md shadow-2xl p-5 font-mono text-[10px] text-[#acb9ca]/90 relative overflow-hidden flex flex-col gap-3">
+                      {/* Bank Header Ribbon */}
+                      <div className="flex justify-between items-center border-b border-dashed border-zinc-700/50 pb-2 mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-555 animate-pulse" />
+                          <span className="font-extrabold text-white text-[9px] uppercase tracking-wider">
+                            {mockInfo.bankName}
+                          </span>
+                        </div>
+                        <span className="text-[8px] text-zinc-500">Comprobante Digital</span>
+                      </div>
+
+                      {/* Transfer Details */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] text-zinc-500 block uppercase">Operación Exitosa</span>
+                        <span className="text-xs font-bold text-white">Transferencia Enviada</span>
+                      </div>
+
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[7px] text-zinc-500 block uppercase">Remitente</span>
+                        <span className="font-semibold text-white">{mockInfo.senderName}</span>
+                        {t.phone_number && <span className="text-[8px] text-zinc-400">{t.phone_number}</span>}
+                      </div>
+
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[7px] text-zinc-500 block uppercase">Referencia</span>
+                        <span className="text-[8px] text-white font-medium select-all">{mockInfo.reference}</span>
+                      </div>
+
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[7px] text-zinc-500 block uppercase">Fecha de Transferencia</span>
+                        <span className="text-[8px] text-white font-medium">{mockInfo.dateString}</span>
+                      </div>
+
+                      <div className="border-t border-dashed border-zinc-700/50 pt-2 flex justify-between items-baseline mt-2">
+                        <span className="text-[8px] text-zinc-500 uppercase font-bold">Total Transferido</span>
+                        <span className="text-base font-black text-emerald-450 select-all">
+                          {formatCurrency(15000)}
                         </span>
                       </div>
-                      <span className="text-[8px] text-zinc-500">Comprobante Digital</span>
-                    </div>
 
-                    {/* Transfer Details */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] text-zinc-500 block uppercase">Operación Exitosa</span>
-                      <span className="text-xs font-bold text-white">Transferencia Enviada</span>
+                      {/* Visual Stamp Overlay for status on receipt */}
+                      {isApproved && (
+                        <div className="absolute right-3 top-8 transform rotate-12 border-2 border-emerald-500/40 text-emerald-400 bg-emerald-500/5 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow">
+                          Aprobado
+                        </div>
+                      )}
+                      {isRejected && (
+                        <div className="absolute right-3 top-8 transform rotate-12 border-2 border-rose-500/40 text-rose-450 bg-rose-500/5 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow">
+                          Rechazado
+                        </div>
+                      )}
                     </div>
-
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7px] text-zinc-500 block uppercase">Remitente</span>
-                      <span className="font-semibold text-white">{mockInfo.senderName}</span>
-                      {t.phone_number && <span className="text-[8px] text-zinc-400">{t.phone_number}</span>}
-                    </div>
-
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7px] text-zinc-500 block uppercase">Referencia</span>
-                      <span className="text-[8px] text-white font-medium select-all">{mockInfo.reference}</span>
-                    </div>
-
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7px] text-zinc-500 block uppercase">Fecha de Transferencia</span>
-                      <span className="text-[8px] text-white font-medium">{mockInfo.dateString}</span>
-                    </div>
-
-                    <div className="border-t border-dashed border-zinc-700/50 pt-2 flex justify-between items-baseline mt-2">
-                      <span className="text-[8px] text-zinc-500 uppercase font-bold">Total Transferido</span>
-                      <span className="text-base font-black text-emerald-450 select-all">
-                        {formatCurrency(15000)}
-                      </span>
-                    </div>
-
-                    {/* Visual Stamp Overlay for status on receipt */}
-                    {isApproved && (
-                      <div className="absolute right-3 top-8 transform rotate-12 border-2 border-emerald-500/40 text-emerald-400 bg-emerald-500/5 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow">
-                        Aprobado
-                      </div>
-                    )}
-                    {isRejected && (
-                      <div className="absolute right-3 top-8 transform rotate-12 border-2 border-rose-500/40 text-rose-400 bg-rose-500/5 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow">
-                        Rechazado
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 {/* Validation Actions Panel */}
