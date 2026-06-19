@@ -79,7 +79,7 @@ export default function ConversationCard({
             <span className="font-bold text-[#66b2ff] block mb-1 text-[10px] uppercase tracking-wider">
               Resumen del Chat (AI)
             </span>
-            "{c.summary}"
+            &ldquo;{c.summary}&rdquo;
           </div>
         ) : (
           <p className="text-xs text-[#acb9ca]/30 italic">Sin resumen disponible.</p>

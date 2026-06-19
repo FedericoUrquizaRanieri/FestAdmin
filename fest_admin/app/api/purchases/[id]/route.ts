@@ -104,6 +104,86 @@ export async function PATCH(
       },
     });
 
+    if (state === "APPROVED") {
+      const purchase = await prisma.purchases.findUnique({
+        where: { id: purchaseId },
+      });
+
+      if (purchase) {
+        await prisma.purchases.update({
+          where: { id: purchaseId },
+          data: {
+            state: "PAID",
+            paid_amount: purchase.total_amount || BigInt(0),
+          },
+        });
+
+        await prisma.tickets.updateMany({
+          where: { purchase_id: purchaseId },
+          data: {
+            payment_state: true,
+          },
+        });
+
+        const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+        if (discordWebhookUrl) {
+          try {
+            await fetch(discordWebhookUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                content: `✅ **Compra APROBADA y PAGADA**\n📞 Cliente: +${purchase.buyer_phone}\n💰 Monto: $${purchase.total_amount ? Number(purchase.total_amount) : 0}\n🎉 ¡Entradas activadas con éxito!`,
+              }),
+            });
+            console.log(`Logged payment approval to Discord for purchase ${purchaseId}`);
+          } catch (discordErr: any) {
+            console.error(`Error logging approval to Discord: ${discordErr.message}`);
+          }
+        }
+      }
+    } else if (state === "REJECTED") {
+      const purchase = await prisma.purchases.findUnique({
+        where: { id: purchaseId },
+      });
+
+      if (purchase) {
+        await prisma.purchases.update({
+          where: { id: purchaseId },
+          data: {
+            state: "PENDING",
+            paid_amount: BigInt(0),
+          },
+        });
+
+        await prisma.tickets.updateMany({
+          where: { purchase_id: purchaseId },
+          data: {
+            payment_state: false,
+          },
+        });
+
+        const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+        if (discordWebhookUrl) {
+          try {
+            await fetch(discordWebhookUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                content: `❌ **Transferencia RECHAZADA**\n📞 Cliente: +${purchase.buyer_phone}\n⚠️ Las entradas continúan pendientes de pago (inactivas).`,
+              }),
+            });
+            console.log(`Logged payment rejection to Discord for purchase ${purchaseId}`);
+          } catch (discordErr: any) {
+            console.error(`Error logging rejection to Discord: ${discordErr.message}`);
+          }
+        }
+      }
+    }
+
     return NextResponse.json(serializeData(updatedTransfer));
   } catch (error: any) {
     console.error("Error updating transfer state:", error);

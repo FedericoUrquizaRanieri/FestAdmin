@@ -12,6 +12,8 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
   const [eventName, setEventName] = useState("");
   const [eventLocation, setEventLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [ticketPrice, setTicketPrice] = useState("10000");
+  const [transferLink, setTransferLink] = useState("reptil.yuyo.medano");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -35,6 +37,8 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
           name: eventName,
           location: eventLocation,
           date: eventDate ? new Date(eventDate).toISOString() : null,
+          ticket_price: ticketPrice ? Number(ticketPrice) : 10000,
+          transfer_link: transferLink || "reptil.yuyo.medano",
         }),
       });
 
@@ -49,9 +53,11 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
       setEventName("");
       setEventLocation("");
       setEventDate("");
+      setTicketPrice("10000");
+      setTransferLink("reptil.yuyo.medano");
       setShowForm(false);
-    } catch (err: any) {
-      setFormError(err.message || "Error al guardar el evento.");
+    } catch (err) {
+      setFormError((err as Error).message || "Error al guardar el evento.");
     } finally {
       setIsSubmitting(false);
     }
@@ -154,6 +160,36 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 className="w-full h-11 px-4 text-sm rounded-lg bg-[#080808] border border-[#4e4e52]/40 text-white focus:border-[#66b2ff] focus:ring-1 focus:ring-[#66b2ff] transition-all outline-none [color-scheme:dark]"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#acb9ca]/80">
+                Precio de Entrada ($)
+              </label>
+              <input
+                type="number"
+                placeholder="Ej: 10000"
+                value={ticketPrice}
+                onChange={(e) => setTicketPrice(e.target.value)}
+                className="w-full h-11 px-4 text-sm rounded-lg bg-[#080808] border border-[#4e4e52]/40 text-white placeholder-[#acb9ca]/40 focus:border-[#66b2ff] focus:ring-1 focus:ring-[#66b2ff] transition-all outline-none"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-[#acb9ca]/80">
+                Alias de Transferencia
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: reptil.yuyo.medano"
+                value={transferLink}
+                onChange={(e) => setTransferLink(e.target.value)}
+                className="w-full h-11 px-4 text-sm rounded-lg bg-[#080808] border border-[#4e4e52]/40 text-white placeholder-[#acb9ca]/40 focus:border-[#66b2ff] focus:ring-1 focus:ring-[#66b2ff] transition-all outline-none"
                 disabled={isSubmitting}
               />
             </div>

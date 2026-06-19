@@ -28,13 +28,15 @@ model conversations {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model events {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  created_at DateTime    @default(now()) @db.Timestamptz(6)
-  date       DateTime?   @db.Date
-  name       String?     @default("")
-  location   String?     @default("")
-  expenses   expenses[]
-  purchases  purchases[]
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_at    DateTime    @default(now()) @db.Timestamptz(6)
+  date          DateTime?   @db.Date
+  name          String?     @default("")
+  location      String?     @default("")
+  ticket_price  BigInt?     @default("")
+  transfer_link String?     @default("")
+  expenses      expenses[]
+  purchases     purchases[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.

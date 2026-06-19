@@ -16,12 +16,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch events on mount when authenticated
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      fetchEvents();
-    }
-  }, [isLoaded, isSignedIn]);
+  // Edit event state
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [ticketPriceInput, setTicketPriceInput] = useState("");
+  const [transferLinkInput, setTransferLinkInput] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -36,15 +36,67 @@ export default function HomePage() {
       }
       const data = await response.json();
       setEvents(data);
-    } catch (err: any) {
-      setError(err.message || "Error al conectar con el servidor.");
+    } catch (err) {
+      setError((err as Error).message || "Error al conectar con el servidor.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch events on mount when authenticated
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      Promise.resolve().then(() => fetchEvents());
+    }
+  }, [isLoaded, isSignedIn]);
+
   const handleEventCreated = (newEvent: Event) => {
     setEvents((prev) => [newEvent, ...prev]);
+  };
+
+  const handleOpenEditModal = (event: Event) => {
+    setSelectedEvent(event);
+    setTicketPriceInput(
+      event.ticket_price !== undefined && event.ticket_price !== null
+        ? String(event.ticket_price)
+        : ""
+    );
+    setTransferLinkInput(event.transfer_link || "");
+    setUpdateError(null);
+  };
+
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) return;
+
+    setUpdating(true);
+    setUpdateError(null);
+
+    try {
+      const response = await fetch(`/api/events/${selectedEvent.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ticket_price: ticketPriceInput ? Number(ticketPriceInput) : null,
+          transfer_link: transferLinkInput || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "No se pudo actualizar el evento.");
+      }
+
+      // Close modal and refresh events
+      setSelectedEvent(null);
+      await fetchEvents();
+    } catch (err) {
+      setUpdateError((err as Error).message || "Error al actualizar el evento.");
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // 1. Loading state (Clerk loading)
@@ -102,8 +154,96 @@ export default function HomePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in mt-6">
           {events.map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard key={event.id} event={event} onEdit={handleOpenEditModal} />
           ))}
+        </div>
+      )}
+
+      {/* Edit Event Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl border border-[#4e4e52]/30 bg-[#0c0c0e]/95 p-6 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex justify-between items-center border-b border-[#4e4e52]/20 pb-3">
+              <h3 className="text-lg font-bold text-white">
+                Editar Configuración
+              </h3>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="text-[#acb9ca]/60 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="text-sm text-[#acb9ca]/80 mb-2">
+              <span className="font-semibold text-white">Evento:</span> {selectedEvent.name}
+            </div>
+
+            {updateError && (
+              <div className="p-3 text-xs rounded-lg border border-red-500/20 bg-red-950/20 text-red-400">
+                {updateError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEvent} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#acb9ca]/80">
+                  Precio de Entrada ($)
+                </label>
+                <input
+                  type="number"
+                  placeholder="Ej: 10000"
+                  value={ticketPriceInput}
+                  onChange={(e) => setTicketPriceInput(e.target.value)}
+                  className="w-full h-11 px-4 text-sm rounded-lg bg-[#080808] border border-[#4e4e52]/40 text-white placeholder-[#acb9ca]/40 focus:border-[#66b2ff] focus:ring-1 focus:ring-[#66b2ff] transition-all outline-none"
+                  disabled={updating}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#acb9ca]/80">
+                  Alias de Transferencia
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: reptil.yuyo.medano"
+                  value={transferLinkInput}
+                  onChange={(e) => setTransferLinkInput(e.target.value)}
+                  className="w-full h-11 px-4 text-sm rounded-lg bg-[#080808] border border-[#4e4e52]/40 text-white placeholder-[#acb9ca]/40 focus:border-[#66b2ff] focus:ring-1 focus:ring-[#66b2ff] transition-all outline-none"
+                  disabled={updating}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEvent(null)}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-[#4e4e52]/40 text-[#acb9ca] hover:bg-[#4e4e52]/10 hover:text-white transition-all text-sm font-semibold cursor-pointer"
+                  disabled={updating}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="flex-1 flex items-center justify-center bg-gradient-to-r from-[#66b2ff] to-[#84d2ff] text-black font-bold text-sm py-2.5 rounded-lg hover:shadow-[0_0_15px_rgba(102,178,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                >
+                  {updating ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar Cambios"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </main>

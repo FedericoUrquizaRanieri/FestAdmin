@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { Purchase } from "@/types";
 import ErrorMessage from "@/components/ErrorMessage";
 import PurchaseInfoCard from "@/components/dashboard/purchases/detail/PurchaseInfoCard";
@@ -29,8 +28,8 @@ export default function PurchaseDetailPage() {
       }
       const data = await response.json();
       setPurchase(data);
-    } catch (err: any) {
-      setError(err.message || "Error al conectar con el servidor.");
+    } catch (err) {
+      setError((err as Error).message || "Error al conectar con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -38,8 +37,9 @@ export default function PurchaseDetailPage() {
 
   useEffect(() => {
     if (purchaseId) {
-      fetchPurchaseDetails();
+      Promise.resolve().then(() => fetchPurchaseDetails());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchaseId]);
 
   const handleUpdateTransferState = async (
@@ -76,8 +76,8 @@ export default function PurchaseDetailPage() {
           transfer_auth: updatedTransfers,
         };
       });
-    } catch (err: any) {
-      alert(err.message || "Error al actualizar el comprobante.");
+    } catch (err) {
+      alert((err as Error).message || "Error al actualizar el comprobante.");
     } finally {
       setTransitioningId(null);
     }

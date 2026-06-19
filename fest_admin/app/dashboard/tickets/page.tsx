@@ -35,13 +35,6 @@ export default function TicketsPage() {
     return () => clearTimeout(handler);
   }, [search]);
 
-  // Fetch tickets whenever active event, page, or search query changes
-  useEffect(() => {
-    if (activeEvent) {
-      fetchTickets(activeEvent.id, page, debouncedSearch);
-    }
-  }, [activeEvent, page, debouncedSearch]);
-
   const fetchTickets = async (eventId: string, currentPage: number, searchVal: string) => {
     setLoadingTickets(true);
     setError(null);
@@ -56,12 +49,19 @@ export default function TicketsPage() {
       const data = await response.json();
       setTickets(data.tickets);
       setTotalTickets(data.total);
-    } catch (err: any) {
-      setError(err.message || "Error al conectar con el servidor.");
+    } catch (err) {
+      setError((err as Error).message || "Error al conectar con el servidor.");
     } finally {
       setLoadingTickets(false);
     }
   };
+
+  // Fetch tickets whenever active event, page, or search query changes
+  useEffect(() => {
+    if (activeEvent) {
+      Promise.resolve().then(() => fetchTickets(activeEvent.id, page, debouncedSearch));
+    }
+  }, [activeEvent, page, debouncedSearch]);
 
   const totalPages = Math.ceil(totalTickets / limit);
 

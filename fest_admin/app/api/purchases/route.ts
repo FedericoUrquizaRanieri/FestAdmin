@@ -3,6 +3,8 @@ import prisma from "@/prisma";
 import { NextResponse } from "next/server";
 import { serializeData } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 // GET: Retrieve all purchases in PENDING or PARTIALLY_PAID state for a specific event
 export async function GET(req: Request) {
   try {
@@ -17,6 +19,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     let eventId = searchParams.get("event_id");
+    const status = searchParams.get("status") || "all";
 
     if (!eventId) {
       // Fallback: use the latest event if event_id is not specified
@@ -32,12 +35,16 @@ export async function GET(req: Request) {
       eventId = latestEvent.id;
     }
 
-    // Query pending/partially paid purchases for the event
+    const stateFilter = status === "pending"
+      ? ["PENDING", "PARTIALLY_PAID"]
+      : ["PENDING", "PARTIALLY_PAID", "PAID"];
+
+    // Query pending/partially paid/paid purchases for the event
     const purchases = await prisma.purchases.findMany({
       where: {
         event_id: eventId,
         state: {
-          in: ["PENDING", "PARTIALLY_PAID"],
+          in: stateFilter as any,
         },
       },
       include: {

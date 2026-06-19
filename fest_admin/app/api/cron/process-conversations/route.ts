@@ -1,0 +1,280 @@
+import { NextResponse } from "next/server";
+import prisma from "@/prisma";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { analyzeConversation } from "@/lib/gemini";
+
+// Disable route response caching
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const processedLogs: any[] = [];
+  try {
+    // 1. Authorization check
+    const authHeader = req.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    const isDev = process.env.NODE_ENV === "development";
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}` && !isDev) {
+      console.warn("Unauthorized request attempt to conversation cron job.");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 2. Fetch conversations that are pending AI response
+    // Model field is spelling: control_over (ConversarionControl enum values: AI, HUMAN)
+    const pendingConversations = await prisma.conversations.findMany({
+      where: {
+        pending: true,
+        control_over: "AI",
+      },
+      include: {
+        messages: {
+          orderBy: { created_at: "asc" },
+        },
+      },
+    });
+
+    if (pendingConversations.length === 0) {
+      return NextResponse.json({ message: "No pending AI conversations to process." });
+    }
+
+    // Fetch latest event settings (ticket price, transfer link alias)
+    const latestEvent = await prisma.events.findFirst({
+      orderBy: { created_at: "desc" },
+    });
+
+    const ticketPrice = latestEvent?.ticket_price ? Number(latestEvent.ticket_price) : 10000;
+    const transferLink = latestEvent?.transfer_link || "reptil.yuyo.medano";
+
+    console.log(`Processing ${pendingConversations.length} pending conversations...`);
+
+    // 3. Process each conversation in isolation
+    for (const conversation of pendingConversations) {
+      try {
+        const phone = conversation.phone_number;
+
+        // Fetch latest purchase and associated tickets
+        const latestPurchase = await prisma.purchases.findFirst({
+          where: { conversation_id: conversation.id },
+          orderBy: { created_at: "desc" },
+          include: {
+            tickets: true,
+          },
+        });
+
+        // Format purchase context for Gemini
+        let purchaseInfo = "No hay compras registradas para esta conversación.";
+        if (latestPurchase) {
+          purchaseInfo = `Compra ID: ${latestPurchase.id}
+Estado de la compra: ${latestPurchase.state || "PENDING"}
+Monto Total: ${latestPurchase.total_amount ? Number(latestPurchase.total_amount) : 0}
+Monto Pagado: ${latestPurchase.paid_amount ? Number(latestPurchase.paid_amount) : 0}
+Tickets/Entradas creadas para esta compra:
+${latestPurchase.tickets.length > 0
+              ? latestPurchase.tickets
+                .map(
+                  (t) =>
+                    `- Ticket ID: ${t.id}, Nombre: ${t.first_name} ${t.last_name}, Género: ${t.gender || "No especificado"
+                    }, Estado Pago: ${t.payment_state ? "Pagado (OK)" : "Pendiente de pago"}`
+                )
+                .join("\n")
+              : "Ninguna entrada creada aún."
+            }`;
+        }
+
+        // Call Gemini for analysis using the conversation's buffer directly
+        const analysis = await analyzeConversation(
+          phone,
+          conversation.state || "IDLE",
+          conversation.summary || "",
+          conversation.buffer || "",
+          conversation.buffer || "",
+          purchaseInfo,
+          ticketPrice,
+          transferLink
+        );
+
+        console.log(`Gemini analysis results for ${phone}:`, JSON.stringify(analysis));
+
+        // 4. Apply Gemini actions to database
+        let createdPurchaseId: string | null = null;
+        let purchaseState = analysis.state;
+
+        if (analysis.intent === "compra_entrada") {
+          if (latestEvent) {
+            const ticketCount = analysis.cantidad || 1;
+            const pricePerTicket = ticketPrice;
+            const total = ticketCount * pricePerTicket;
+
+            let targetPurchase: any = latestPurchase;
+
+            if (!targetPurchase) {
+              targetPurchase = await prisma.purchases.create({
+                data: {
+                  buyer_phone: phone,
+                  conversation_id: conversation.id,
+                  event_id: latestEvent.id,
+                  total_amount: BigInt(total),
+                  paid_amount: BigInt(0),
+                  state: "PENDING",
+                },
+              });
+              console.log(`Created PENDING purchase ${targetPurchase.id} for ${ticketCount} tickets.`);
+            } else {
+              targetPurchase = await prisma.purchases.update({
+                where: { id: targetPurchase.id },
+                data: {
+                  total_amount: BigInt(total),
+                  paid_amount: targetPurchase.paid_amount || BigInt(0),
+                  state: "PENDING",
+                },
+              });
+              console.log(`Updated existing purchase ${targetPurchase.id} with total_amount ${total}.`);
+            }
+            createdPurchaseId = targetPurchase.id;
+          } else {
+            console.warn("Could not create purchase: No events found in DB.");
+          }
+        } else if (analysis.intent === "compra_cerrada") {
+          if (latestEvent) {
+            let targetPurchase: any = latestPurchase;
+            const total = Array.isArray(analysis.personas) && analysis.personas.length > 0
+              ? analysis.personas.reduce((sum, p) => sum + (p.price || ticketPrice), 0)
+              : (analysis.cantidad || 1) * ticketPrice;
+
+            if (!targetPurchase) {
+              targetPurchase = await prisma.purchases.create({
+                data: {
+                  buyer_phone: phone,
+                  conversation_id: conversation.id,
+                  event_id: latestEvent.id,
+                  total_amount: BigInt(total),
+                  paid_amount: BigInt(0),
+                  state: "PENDING",
+                },
+              });
+            } else {
+              targetPurchase = await prisma.purchases.update({
+                where: { id: targetPurchase.id },
+                data: {
+                  state: "PENDING",
+                  total_amount: targetPurchase.total_amount || BigInt(total),
+                  paid_amount: targetPurchase.paid_amount || BigInt(0),
+                },
+              });
+            }
+
+            createdPurchaseId = targetPurchase.id;
+            console.log(`Updated purchase ${targetPurchase.id} as PENDING (awaiting manual verification).`);
+
+            // Create tickets one by one from the structured 'personas' array
+            // Only if they haven't been created yet for this purchase
+            const ticketsAlreadyCreated = latestPurchase && latestPurchase.tickets && latestPurchase.tickets.length > 0;
+            if (!ticketsAlreadyCreated && Array.isArray(analysis.personas) && analysis.personas.length > 0) {
+              for (const attendee of analysis.personas) {
+                const { first_name, last_name, gender, price } = attendee;
+                await prisma.tickets.create({
+                  data: {
+                    first_name: first_name || "Asistente",
+                    last_name: last_name || "Sin Apellido",
+                    number_assoc: phone, // Set phone number as identifier
+                    payment_state: false, // payment is false until approved
+                    gender: gender as any, // MALE or FEMALE
+                    price: BigInt(price || ticketPrice),
+                    purchase_id: targetPurchase.id,
+                  },
+                });
+                console.log(`Created PENDING ticket for attendee: ${first_name} ${last_name} (Phone: ${phone}, Gender: ${gender}, Price: ${price})`);
+              }
+            } else if (ticketsAlreadyCreated) {
+              console.log(`Tickets already exist for purchase ${targetPurchase.id}. Skipping ticket recreation.`);
+            }
+          }
+        }
+
+        // 5. Send WhatsApp reply
+        if (analysis.response && analysis.response.trim() !== "") {
+          try {
+            await sendWhatsAppMessage(phone, analysis.response);
+            console.log(`Sent WhatsApp response to ${phone}`);
+          } catch (whatsappErr: any) {
+            console.error(`Error sending WhatsApp reply to ${phone}: ${whatsappErr.message}`);
+          }
+        }
+
+        // 6. Log to Discord webhook
+        const logsToSend: string[] = [];
+        const ticketsAlreadyCreated = latestPurchase && latestPurchase.tickets && latestPurchase.tickets.length > 0;
+
+        // Confirmed purchase log (only on initial purchase receipt)
+        if (analysis.intent === "compra_cerrada" && !ticketsAlreadyCreated) {
+          const attendeeList = Array.isArray(analysis.personas) && analysis.personas.length > 0
+            ? analysis.personas.map((p) => `- ${p.first_name} ${p.last_name} (${p.gender}, DNI: ${p.dni || "No especificado"}, Precio: $${p.price || 10000})`).join("\n")
+            : "No especificado";
+          logsToSend.push(`📥 **Compra Recibida (Pendiente de Aprobación)**\n📞 Cliente: +${phone}\n🎫 Personas registradas:\n${attendeeList}\n⏳ El comprobante se encuentra bajo revisión.`);
+        }
+
+        // IA Response log (for every response sent to the client)
+        if (analysis.response && analysis.response.trim() !== "") {
+          logsToSend.push(`💬 **Respuesta de la IA**\n📞 Cliente: +${phone}\n💬 Mensaje: "${analysis.response}"`);
+        }
+
+        const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+        if (discordWebhookUrl && logsToSend.length > 0) {
+          for (const logContent of logsToSend) {
+            try {
+              await fetch(discordWebhookUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  content: logContent,
+                }),
+              });
+              console.log(`Logged event to Discord for ${phone}`);
+            } catch (discordErr: any) {
+              console.error(`Error logging to Discord for ${phone}: ${discordErr.message}`);
+            }
+          }
+        }
+
+        // 7. Update conversation details and reset pending flag
+        await prisma.conversations.update({
+          where: { id: conversation.id },
+          data: {
+            state: analysis.state as any,
+            summary: analysis.summary,
+            pending: false, // Mark as processed
+          },
+        });
+
+        processedLogs.push({
+          id: conversation.id,
+          phone,
+          status: "success",
+          intent: analysis.intent,
+          purchaseCreated: createdPurchaseId,
+        });
+      } catch (err: any) {
+        console.error(`Error processing conversation ${conversation.id}:`, err);
+        processedLogs.push({
+          id: conversation.id,
+          phone: conversation.phone_number,
+          status: "failed",
+          error: err.message || err.toString(),
+        });
+      }
+    }
+
+    return NextResponse.json({
+      message: "Cron execution completed.",
+      processed: processedLogs,
+    });
+  } catch (error: any) {
+    console.error("Critical error in process-conversations cron job:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}

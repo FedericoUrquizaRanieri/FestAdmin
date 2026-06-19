@@ -64,9 +64,8 @@ export default function EventHeader({
           >
             <span>{activeEvent?.name || "Cargando evento..."}</span>
             <svg
-              className={`w-6 h-6 text-[#acb9ca] group-hover:text-[#66b2ff] transition-transform duration-300 ${
-                dropdownOpen ? "rotate-180" : ""
-              }`}
+              className={`w-6 h-6 text-[#acb9ca] group-hover:text-[#66b2ff] transition-transform duration-300 ${dropdownOpen ? "rotate-180" : ""
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -85,11 +84,10 @@ export default function EventHeader({
                 <button
                   key={e.id}
                   onClick={() => onSelect(e)}
-                  className={`w-full text-left px-4 py-3 text-sm flex flex-col gap-0.5 hover:bg-[#66b2ff]/10 transition-colors cursor-pointer border-l-2 ${
-                    e.id === activeEvent?.id
-                      ? "border-[#66b2ff] bg-[#66b2ff]/5 text-white"
-                      : "border-transparent text-[#acb9ca]/90 hover:text-white"
-                  }`}
+                  className={`w-full text-left px-4 py-3 text-sm flex flex-col gap-0.5 hover:bg-[#66b2ff]/10 transition-colors cursor-pointer border-l-2 ${e.id === activeEvent?.id
+                    ? "border-[#66b2ff] bg-[#66b2ff]/5 text-white"
+                    : "border-transparent text-[#acb9ca]/90 hover:text-white"
+                    }`}
                 >
                   <span className="font-semibold">{e.name}</span>
                   <span className="text-[11px] text-[#acb9ca]/50">
