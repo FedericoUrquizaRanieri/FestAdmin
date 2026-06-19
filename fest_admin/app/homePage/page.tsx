@@ -23,13 +23,6 @@ export default function HomePage() {
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
-  // Fetch events on mount when authenticated
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      fetchEvents();
-    }
-  }, [isLoaded, isSignedIn]);
-
   const fetchEvents = async () => {
     setLoading(true);
     setError(null);
@@ -43,12 +36,19 @@ export default function HomePage() {
       }
       const data = await response.json();
       setEvents(data);
-    } catch (err: any) {
-      setError(err.message || "Error al conectar con el servidor.");
+    } catch (err) {
+      setError((err as Error).message || "Error al conectar con el servidor.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Fetch events on mount when authenticated
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      Promise.resolve().then(() => fetchEvents());
+    }
+  }, [isLoaded, isSignedIn]);
 
   const handleEventCreated = (newEvent: Event) => {
     setEvents((prev) => [newEvent, ...prev]);
@@ -92,8 +92,8 @@ export default function HomePage() {
       // Close modal and refresh events
       setSelectedEvent(null);
       await fetchEvents();
-    } catch (err: any) {
-      setUpdateError(err.message || "Error al actualizar el evento.");
+    } catch (err) {
+      setUpdateError((err as Error).message || "Error al actualizar el evento.");
     } finally {
       setUpdating(false);
     }

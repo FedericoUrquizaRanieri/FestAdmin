@@ -1,6 +1,3 @@
-import { promises as fs } from "fs";
-import path from "path";
-
 /**
  * Sends a text message to a user via WhatsApp Meta API
  */
@@ -9,14 +6,12 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<voi
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
   if (
-    process.env.MOCK_APIS === "true" ||
     !phoneId ||
     !accessToken ||
     phoneId === "your_whatsapp_phone_number_id_here" ||
     accessToken === "your_whatsapp_graph_api_access_token_here"
   ) {
-    console.log(`[MOCK WHATSAPP SEND] To: ${to}, Message: ${text}`);
-    return;
+    throw new Error("WhatsApp credentials (WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_ACCESS_TOKEN) are not configured or use default placeholder values.");
   }
 
   const response = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
@@ -49,21 +44,10 @@ export async function downloadWhatsAppMedia(mediaId: string): Promise<{ buffer: 
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
   if (
-    process.env.MOCK_APIS === "true" ||
     !accessToken ||
-    accessToken === "your_whatsapp_graph_api_access_token_here" ||
-    mediaId.startsWith("mock_")
+    accessToken === "your_whatsapp_graph_api_access_token_here"
   ) {
-    console.log(`[MOCK WHATSAPP MEDIA DOWNLOAD] Media ID: ${mediaId}`);
-    if (mediaId.includes("audio")) {
-      const audioPath = path.join(process.cwd(), "public", "uploads", "WhatsApp Ptt 2026-06-19 at 13.01.32.ogg");
-      const buffer = await fs.readFile(audioPath);
-      return { buffer, mimeType: "audio/ogg; codecs=opus" };
-    }
-
-    const imagePath = path.join(process.cwd(), "public", "uploads", "WhatsApp Image 2026-06-07 at 12.03.08.jpeg");
-    const buffer = await fs.readFile(imagePath);
-    return { buffer, mimeType: "image/jpeg" };
+    throw new Error("WHATSAPP_ACCESS_TOKEN is not configured or uses the default placeholder value.");
   }
 
   // 1. Get media metadata URL
@@ -124,8 +108,7 @@ export async function uploadToSupabaseStorage(
     supabaseUrl === "your_supabase_url_here" ||
     serviceKey === "your_supabase_service_role_key_here"
   ) {
-    console.log(`[MOCK SUPABASE UPLOAD] Mocking file upload because credentials are placeholders or not set: ${filename}`);
-    return `https://supabase.co/mock-transfer-${filename}`;
+    throw new Error("Supabase Storage credentials (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY) are not configured or use default placeholder values.");
   }
 
   const cleanUrl = supabaseUrl.replace(/\/$/, "");
@@ -141,7 +124,7 @@ export async function uploadToSupabaseStorage(
       // Upsert header to allow overwriting if same filename
       "x-upsert": "true",
     },
-    body: buffer as any,
+    body: buffer as unknown as BodyInit,
   });
 
   if (!response.ok) {

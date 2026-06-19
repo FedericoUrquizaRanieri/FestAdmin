@@ -42,9 +42,9 @@ export default function PurchasesPage() {
       }
       const data = await response.json();
       setPurchases(data);
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        setError(err.message || "Error al conectar con el servidor.");
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setError((err as Error).message || "Error al conectar con el servidor.");
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -55,13 +55,14 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     if (activeEvent) {
-      fetchPurchases(activeEvent.id);
+      Promise.resolve().then(() => fetchPurchases(activeEvent.id));
     }
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEvent, filter]);
 
   if (!activeEvent) {

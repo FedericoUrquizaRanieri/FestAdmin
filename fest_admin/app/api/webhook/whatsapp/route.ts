@@ -8,9 +8,6 @@ import { transcribeAudio } from "@/lib/gemini";
 // GET: Webhook verification by Meta
 export async function GET(req: Request) {
   try {
-    if (req.headers.get("x-mock-apis") === "true") {
-      process.env.MOCK_APIS = "true";
-    }
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get("hub.mode");
     const token = searchParams.get("hub.verify_token");
@@ -39,9 +36,6 @@ export async function GET(req: Request) {
 // POST: Handle incoming WhatsApp message webhook events
 export async function POST(req: Request) {
   try {
-    if (req.headers.get("x-mock-apis") === "true") {
-      process.env.MOCK_APIS = "true";
-    }
     const body = await req.json();
 
     // Verify webhook object type
@@ -133,37 +127,37 @@ export async function POST(req: Request) {
             }
 
             let storagePath = "";
-            try {
-              const { buffer, mimeType: downloadedMime } = await downloadWhatsAppMedia(imageId);
-              let ext = "jpg";
-              if (downloadedMime.includes("png")) ext = "png";
-              else if (downloadedMime.includes("webp")) ext = "webp";
-              else if (downloadedMime.includes("jpeg")) ext = "jpeg";
+            let fileBuffer: Buffer | null = null;
+            let mimeType = "";
 
-              const filename = `transfer-${purchase.id}-${Date.now()}.${ext}`;
-              storagePath = await uploadToSupabaseStorage(buffer, downloadedMime, filename, "transfer_images");
-              console.log(`Successfully uploaded image to Supabase: ${storagePath}`);
+            try {
+              const result = await downloadWhatsAppMedia(imageId);
+              fileBuffer = result.buffer;
+              mimeType = result.mimeType;
             } catch (downloadErr: any) {
-              console.error(`Failed to download/upload WhatsApp image media: ${downloadErr.message}`);
-              // Fallback to local
+              console.error(`Failed to download WhatsApp image media: ${downloadErr.message}`);
+            }
+
+            if (fileBuffer) {
               try {
-                const { buffer } = await downloadWhatsAppMedia(imageId);
-                const filename = `fallback-transfer-${purchase.id}-${Date.now()}.jpg`;
-                const uploadsDir = path.join(process.cwd(), "public", "uploads");
-                await fs.mkdir(uploadsDir, { recursive: true });
-                const absolutePath = path.join(uploadsDir, filename);
-                await fs.writeFile(absolutePath, buffer);
-                storagePath = `/uploads/${filename}`;
-              } catch (localFallbackErr: any) {
-                storagePath = "/uploads/fallback-error.jpg";
+                let ext = "jpg";
+                if (mimeType.includes("png")) ext = "png";
+                else if (mimeType.includes("webp")) ext = "webp";
+                else if (mimeType.includes("jpeg")) ext = "jpeg";
+
+                const filename = `transfer-${purchase.id}-${Date.now()}.${ext}`;
+                storagePath = await uploadToSupabaseStorage(fileBuffer, mimeType, filename, "transfer_images");
+                console.log(`Successfully uploaded image to Supabase: ${storagePath}`);
+              } catch (uploadErr: any) {
+                console.error(`Failed to upload WhatsApp image to Supabase: ${uploadErr.message}`);
               }
             }
 
-            // Create transfer_auth record
+            // Create transfer_auth record (if storagePath is empty, it means we don't have a valid image path)
             await prisma.transfer_auth.create({
               data: {
                 phone_number: from,
-                storage_path: storagePath,
+                storage_path: storagePath || null,
                 state: "UNDER_REVIEW",
                 purchase_id: purchase.id,
               },

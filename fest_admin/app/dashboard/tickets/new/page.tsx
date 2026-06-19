@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useDashboard } from "@/app/dashboard/layout";
 import PageHeader from "@/components/dashboard/PageHeader";
 
@@ -74,8 +73,8 @@ export default function NewTicketPage() {
       setTimeout(() => {
         router.push(`/dashboard/tickets?event_id=${eventId}`);
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Ocurrió un error inesperado.");
+    } catch (err) {
+      setError((err as Error).message || "Ocurrió un error inesperado.");
     } finally {
       setIsSubmitting(false);
     }

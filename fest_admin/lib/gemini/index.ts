@@ -15,16 +15,11 @@ export interface GeminiAnalysisResponse {
   state: "IDLE" | "WAITING_PAYMENT" | "WAITING_CONFIRMATION" | "COMPLETED";
 }
 
-/**
- * Transcribes an audio buffer using the Gemini 1.5 Flash model
- */
 export async function transcribeAudio(audioBuffer: Buffer, mimeType: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const isMockAudio = audioBuffer.toString("base64") === "T2dnUwACAAAAAAAAAAAADQAAAAAAAABtZWRpYQ==" || audioBuffer.toString("ascii", 0, 4) === "RIFF";
 
-  if (process.env.MOCK_APIS === "true" || !apiKey || apiKey === "your_gemini_api_key_here" || isMockAudio) {
-    console.log("[MOCK GEMINI TRANSCRIBE] Returning mock audio transcription");
-    return "Hola, me gustaría comprar una entrada para la fiesta. Mi nombre es Juan Pérez y mi DNI es 40123456 y Maria Lopez DNI 41234567.";
+  if (!apiKey || apiKey === "your_gemini_api_key_here") {
+    throw new Error("GEMINI_API_KEY is not configured or is the default placeholder in environment variables.");
   }
 
   // Clean mime type (e.g. "audio/ogg; codecs=opus" -> "audio/ogg")
@@ -86,53 +81,11 @@ export async function analyzeConversation(
 ): Promise<GeminiAnalysisResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
 
-  if (process.env.MOCK_APIS === "true" || !apiKey || apiKey === "your_gemini_api_key_here") {
-    console.log("[MOCK GEMINI ANALYSIS] Returning simulated response because MOCK_APIS is active or API key is missing");
-    
-    let intent: "compra_entrada" | "compra_cerrada" | "otro" = "otro";
-    let cantidad = 0;
-    let personas: Attendee[] = [];
-    let responseText = "¡Hola! Para registrar tu entrada, confírmanos tu Nombre, Apellido y tu Género (Masculino/Femenino).";
-    let stateVal: any = "IDLE";
-
-    const normalizedMsg = messagesList.toLowerCase();
-    
-    if (normalizedMsg.includes("juan perez") || normalizedMsg.includes("juan pérez") || normalizedMsg.includes("40123456")) {
-      intent = "compra_cerrada";
-      cantidad = 2;
-      personas = [
-        { first_name: "Juan", last_name: "Perez", dni: "40123456", gender: "MALE", price: ticketPrice },
-        { first_name: "Maria", last_name: "Lopez", dni: "41234567", gender: "FEMALE", price: ticketPrice }
-      ];
-      responseText = "¡Perfecto! Tus entradas han sido registradas y confirmadas con éxito para Juan Pérez y María López. ¡Que disfrutes la fiesta!";
-      stateVal = "COMPLETED";
-    } else if (normalizedMsg.includes("transferencia") || normalizedMsg.includes("comprobante") || normalizedMsg.includes("comprobante de transferencia")) {
-      intent = "compra_cerrada";
-      cantidad = 2;
-      personas = [
-        { first_name: "Juan", last_name: "Perez", dni: "40123456", gender: "MALE", price: ticketPrice },
-        { first_name: "Maria", last_name: "Lopez", dni: "41234567", gender: "FEMALE", price: ticketPrice }
-      ];
-      responseText = "¡Excelente! Recibimos tu comprobante de transferencia correctamente. La compra por tus 2 entradas ha sido aprobada.";
-      stateVal = "COMPLETED";
-    } else if (normalizedMsg.includes("comprar") || normalizedMsg.includes("entrada") || normalizedMsg.includes("entradas")) {
-      intent = "compra_entrada";
-      cantidad = 2;
-      responseText = `¡Hola! Claro que sí, cada entrada sale ${ticketPrice.toLocaleString("es-AR")} pesos. Podes transferir a ${transferLink}. Recordá enviarnos el comprobante por foto y la lista de Nombre/DNI.`;
-      stateVal = "WAITING_PAYMENT";
-    }
-
-    return {
-      intent,
-      cantidad,
-      personas,
-      response: responseText,
-      summary: "Simulación local de compra de entradas sin APIs.",
-      state: stateVal
-    };
+  if (!apiKey || apiKey === "your_gemini_api_key_here") {
+    throw new Error("GEMINI_API_KEY is not configured or is the default placeholder in environment variables.");
   }
 
-  let systemPrompt = process.env.GEMINI_SYSTEM_PROMPT || 
+  let systemPrompt = process.env.GEMINI_SYSTEM_PROMPT ||
     `Eres un asistente virtual de venta de entradas para FestAdmin. Tu objetivo es interactuar con el cliente y ayudarlo.
     
     El precio actual de 1 entrada es 10.000 pesos.
@@ -276,8 +229,8 @@ Analiza la conversación anterior y decide cuál debe ser la respuesta al client
   try {
     const parsed: GeminiAnalysisResponse = JSON.parse(textResponse);
     return parsed;
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to parse Gemini JSON output:", textResponse);
-    throw new Error(`Failed to parse structured JSON from Gemini: ${err.message}`);
+    throw new Error(`Failed to parse structured JSON from Gemini: ${(err as Error).message}`);
   }
 }

@@ -56,8 +56,8 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
       setTicketPrice("10000");
       setTransferLink("reptil.yuyo.medano");
       setShowForm(false);
-    } catch (err: any) {
-      setFormError(err.message || "Error al guardar el evento.");
+    } catch (err) {
+      setFormError((err as Error).message || "Error al guardar el evento.");
     } finally {
       setIsSubmitting(false);
     }
