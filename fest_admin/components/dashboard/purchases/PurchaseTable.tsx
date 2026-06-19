@@ -10,11 +10,13 @@ import PaginationControls from "@/components/dashboard/PaginationControls";
 interface PurchaseTableProps {
   purchases: Purchase[];
   activeEventId: string;
+  filter?: string;
 }
 
 export default function PurchaseTable({
   purchases,
   activeEventId,
+  filter = "all",
 }: PurchaseTableProps) {
   const router = useRouter();
   
@@ -35,7 +37,7 @@ export default function PurchaseTable({
     switch (state) {
       case "PENDING":
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-405 border border-amber-500/25 uppercase tracking-wider animate-pulse">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/25 uppercase tracking-wider animate-pulse">
             ● Pendiente
           </span>
         );
@@ -43,6 +45,12 @@ export default function PurchaseTable({
         return (
           <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-sky-500/10 text-[#66b2ff] border border-sky-500/20 uppercase tracking-wider">
             ● Pago Parcial
+          </span>
+        );
+      case "PAID":
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 uppercase tracking-wider">
+            ● Pagado
           </span>
         );
       default:
@@ -55,11 +63,16 @@ export default function PurchaseTable({
   };
 
   if (purchases.length === 0) {
+    const isPendingFilter = filter === "pending";
     return (
       <EmptyState
         icon="🎫"
-        title="Sin compras pendientes"
-        description="No hay compras que requieran verificación manual en este festival en este momento."
+        title={isPendingFilter ? "Sin acreditaciones pendientes" : "Sin compras registradas"}
+        description={
+          isPendingFilter
+            ? "No hay compras que requieran verificación manual en este festival en este momento."
+            : "Aún no hay compras registradas para este festival."
+        }
       />
     );
   }
@@ -109,7 +122,7 @@ export default function PurchaseTable({
                   </td>
                   <td className="py-4 px-6 text-center">
                     <span className="inline-flex items-center gap-1.5 text-xs text-[#66b2ff] group-hover:text-white font-semibold transition-colors">
-                      Verificar
+                      {p.state === "PAID" ? "Ver Detalles" : "Verificar"}
                       <svg
                         className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition-transform"
                         fill="none"

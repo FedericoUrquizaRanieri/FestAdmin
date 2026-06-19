@@ -68,7 +68,7 @@ export default function OperationsSummary({
 
         {/* Conversiones con Ventas Card */}
         <Link
-          href={`/dashboard/purchases?event_id=${activeEventId || ""}`}
+          href={`/dashboard/purchases?event_id=${activeEventId || ""}&filter=all`}
           className="group relative overflow-hidden rounded-2xl border border-[#4e4e52]/20 bg-[#0c0c0e]/40 p-6 transition-all duration-300 hover:border-cyan-500/40 hover:bg-[#0c0c0e] hover:shadow-[0_8px_20px_rgba(6,182,212,0.05)] cursor-pointer flex flex-col justify-between"
         >
           <div>
@@ -110,9 +110,8 @@ export default function OperationsSummary({
           </div>
         </Link>
 
-        {/* Pending Approvals Card */}
         <Link
-          href={`/dashboard/purchases?event_id=${activeEventId || ""}`}
+          href={`/dashboard/purchases?event_id=${activeEventId || ""}&filter=pending`}
           className={`group relative overflow-hidden rounded-2xl border p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between ${
             pendingApprovals > 0
               ? "border-amber-500/30 bg-amber-950/10 hover:bg-amber-950/20 hover:border-amber-500/50"

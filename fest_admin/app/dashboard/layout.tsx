@@ -71,6 +71,8 @@ function DashboardProviderInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (events.length === 0) return;
 
+    const params = new URLSearchParams(searchParams.toString());
+
     if (urlEventId) {
       const matchedEvent = events.find((e) => e.id === urlEventId);
       if (matchedEvent) {
@@ -78,14 +80,16 @@ function DashboardProviderInner({ children }: { children: React.ReactNode }) {
       } else {
         // Fallback to first event and update URL
         setActiveEvent(events[0]);
-        router.replace(`${pathname}?event_id=${events[0].id}`);
+        params.set("event_id", events[0].id);
+        router.replace(`${pathname}?${params.toString()}`);
       }
     } else {
       // No ID in URL, fallback to first event and update URL
       setActiveEvent(events[0]);
-      router.replace(`${pathname}?event_id=${events[0].id}`);
+      params.set("event_id", events[0].id);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }, [urlEventId, events, pathname, router]);
+  }, [urlEventId, events, pathname, router, searchParams]);
 
   // Auth Guards in Layout
   if (!isLoaded) {
