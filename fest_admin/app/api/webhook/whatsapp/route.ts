@@ -109,15 +109,28 @@ export async function POST(req: Request) {
               continue;
             }
 
-            // Create purchase
-            const purchase = await prisma.purchases.create({
-              data: {
-                buyer_phone: from,
-                conversation_id: conversation.id,
-                event_id: latestEvent.id,
-                state: "PENDING",
-              },
+            // Find if there is an existing purchase for this conversation
+            const existingPurchase = await prisma.purchases.findFirst({
+              where: { conversation_id: conversation.id },
+              orderBy: { created_at: "desc" },
             });
+
+            let purchase;
+            if (!existingPurchase) {
+              // Create purchase
+              purchase = await prisma.purchases.create({
+                data: {
+                  buyer_phone: from,
+                  conversation_id: conversation.id,
+                  event_id: latestEvent.id,
+                  state: "PENDING",
+                },
+              });
+              console.log(`Created new PENDING purchase ${purchase.id} for image message.`);
+            } else {
+              purchase = existingPurchase;
+              console.log(`Reusing existing purchase ${purchase.id} for image message.`);
+            }
 
             let storagePath = "";
             try {
