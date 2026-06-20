@@ -2,7 +2,8 @@
   "crons": [
     {
       "path": "/api/cron/process-conversations",
-      "schedule": "*/2 * * * *"
+      "schedule": "0 0 * * *",
+      "_comment": "Vercel Hobby tier limit: once per day (0 0 * * *). For Pro/Enterprise (every 2 min), use: '*/2 * * * *'"
     }
   ]
 }
