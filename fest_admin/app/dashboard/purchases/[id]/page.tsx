@@ -39,7 +39,6 @@ export default function PurchaseDetailPage() {
     if (purchaseId) {
       Promise.resolve().then(() => fetchPurchaseDetails());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchaseId]);
 
   const handleUpdateTransferState = async (
@@ -66,7 +65,7 @@ export default function PurchaseDetailPage() {
       // Update local state for the modified transfer
       setPurchase((prev) => {
         if (!prev) return null;
-        
+
         const updatedTransfers = prev.transfer_auth?.map((t) =>
           t.id.toString() === transferId.toString() ? { ...t, state } : t
         ) || [];

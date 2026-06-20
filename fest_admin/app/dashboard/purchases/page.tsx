@@ -62,7 +62,6 @@ export default function PurchasesPage() {
         abortControllerRef.current.abort();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEvent, filter]);
 
   if (!activeEvent) {
