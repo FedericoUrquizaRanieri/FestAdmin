@@ -33,7 +33,7 @@ model events {
   date          DateTime?   @db.Date
   name          String?     @default("")
   location      String?     @default("")
-  ticket_price  BigInt?     @default("")
+  ticket_price  BigInt?     @default(15000)
   transfer_link String?     @default("")
   expenses      expenses[]
   purchases     purchases[]
